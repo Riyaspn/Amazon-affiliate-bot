@@ -303,7 +303,7 @@ from playwright.async_api import async_playwright
 
 async def scrape_single_combo_product(url, page, max_products=1):
     try:
-        # Set realistic user-agent and headers to bypass bot detection
+        # Step 1: Set realistic headers
         await page.set_user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -312,21 +312,33 @@ async def scrape_single_combo_product(url, page, max_products=1):
             "Accept-Language": "en-US,en;q=0.9"
         })
 
+        # Step 2: Go to the URL
         await page.goto(url, timeout=30000)
-        await page.wait_for_timeout(3000)  # give time for JS to load
+        await page.wait_for_timeout(3000)  # Give JS time
 
-        # Try default selector first
-        selector = "div[data-cy='asin-faceout-container']"
+        # Step 3: Try selector 1 → fail → try selector 2
+        product_elements = []
+        selector = None
         try:
-            await page.wait_for_selector(selector, timeout=10000)
+            selector = "div[data-cy='asin-faceout-container']"
+            await page.wait_for_selector(selector, timeout=8000)
             product_elements = await page.query_selector_all(selector)
-        except Exception:
-            print("⚠️ Default selector failed. Trying fallback selector...")
-            # Fallback: normal search result structure
-            selector = "div[data-component-type='s-search-result']"
-            await page.wait_for_selector(selector, timeout=10000)
-            product_elements = await page.query_selector_all(selector)
+            print("✅ Used selector: asin-faceout-container")
+        except:
+            try:
+                selector = "div[data-component-type='s-search-result']"
+                await page.wait_for_selector(selector, timeout=8000)
+                product_elements = await page.query_selector_all(selector)
+                print("✅ Used selector: s-search-result")
+            except Exception as e:
+                print(f"❌ Fallback selector failed: {e}")
+                return "Combo Deal", []
 
+        if not product_elements:
+            print("❌ No product elements found.")
+            return "Combo Deal", []
+
+        # Step 4: Extract products
         products = []
         for elem in product_elements:
             html_content = await elem.inner_html()
@@ -337,11 +349,11 @@ async def scrape_single_combo_product(url, page, max_products=1):
             if len(products) >= max_products:
                 break
 
-        # Extract category label from URL or fallback
         label = url.split("k=")[-1].split("&")[0].replace("+", " ").title()
         return label, products
 
     except Exception as e:
         print(f"❌ Error fetching combo product: {e}")
         return "Combo Deal", []
+
 
