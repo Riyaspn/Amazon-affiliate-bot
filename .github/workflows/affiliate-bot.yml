@@ -1,57 +1,54 @@
-name: Run Amazon Affiliate Bot
+name: Run Affiliate Bot
 
 on:
-  schedule:
-    - cron: '30 3 * * *'     # Daily 9:00 AM IST
-    - cron: '30 15 * * *'    # Daily 9:00 PM IST
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the week (e.g. Monday)'
+        description: 'Day of the Week (e.g., Monday)'
         required: false
-        default: ''
       time_of_day:
-        description: 'Time of day: morning or evening'
+        description: 'Time of Day (morning/evening)'
         required: false
-        default: ''
+  schedule:
+    - cron: '30 3 * * *'     # Daily 9:00 AM IST
+    - cron: '30 15 * * *'    # Daily 9:00 PM IST
 
 jobs:
-  run:
+  run-bot:
     runs-on: ubuntu-latest
 
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: 3.10
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install
+          sudo apt-get install -y libnss3
 
-      - name: Run main.py with optional args
+      - name: Run main.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          if [ -z "${{ github.event.inputs.day }}" ]; then
-            echo "🟢 No manual inputs — running with system time"
+          day="${{ github.event.inputs.day || '' }}"
+          time="${{ github.event.inputs.time_of_day || '' }}"
+          if [ -z "$day" ]; then
+            echo "🟡 No manual input — running scheduled default"
             python main.py
           else
-            echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
-            python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
-          fi
+            echo "🟡 Manual input provided — running for $day $time"
+            python main.py "$day" "$time"
 
-
-- name: Upload Combo Screenshot (if exists)
-  if: always()
-  uses: actions/upload-artifact@v3
-  with:
-    name: combo-debug
-    path: combo_debug.png
+      - name: Upload Combo Screenshot (if exists)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: combo-debug
+          path: combo_debug.png
