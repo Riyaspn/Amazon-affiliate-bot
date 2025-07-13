@@ -303,7 +303,7 @@ from playwright.async_api import async_playwright
 
 async def scrape_single_combo_product(url, page, max_products=1):
     try:
-        # Step 1: Set realistic headers
+        # Set user-agent and headers
         await page.set_user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -312,33 +312,34 @@ async def scrape_single_combo_product(url, page, max_products=1):
             "Accept-Language": "en-US,en;q=0.9"
         })
 
-        # Step 2: Go to the URL
         await page.goto(url, timeout=30000)
-        await page.wait_for_timeout(3000)  # Give JS time
+        await page.wait_for_timeout(5000)  # Let page render
 
-        # Step 3: Try selector 1 → fail → try selector 2
+        # 🧪 Screenshot for GitHub debugging
+        await page.screenshot(path="combo_debug.png", full_page=True)
+
         product_elements = []
-        selector = None
+        used_selector = None
+
+        # Try first selector
         try:
-            selector = "div[data-cy='asin-faceout-container']"
-            await page.wait_for_selector(selector, timeout=8000)
-            product_elements = await page.query_selector_all(selector)
-            print("✅ Used selector: asin-faceout-container")
+            used_selector = "div[data-cy='asin-faceout-container']"
+            product_elements = await page.query_selector_all(used_selector)
+            if not product_elements:
+                raise Exception("No elements found for selector 1")
+            print(f"✅ Used selector: {used_selector}")
         except:
             try:
-                selector = "div[data-component-type='s-search-result']"
-                await page.wait_for_selector(selector, timeout=8000)
-                product_elements = await page.query_selector_all(selector)
-                print("✅ Used selector: s-search-result")
+                used_selector = "div[data-component-type='s-search-result']"
+                product_elements = await page.query_selector_all(used_selector)
+                if not product_elements:
+                    raise Exception("No elements found for selector 2")
+                print(f"✅ Used selector: {used_selector}")
             except Exception as e:
-                print(f"❌ Fallback selector failed: {e}")
+                print(f"❌ Failed both selectors: {e}")
                 return "Combo Deal", []
 
-        if not product_elements:
-            print("❌ No product elements found.")
-            return "Combo Deal", []
-
-        # Step 4: Extract products
+        # Extract products
         products = []
         for elem in product_elements:
             html_content = await elem.inner_html()
@@ -353,7 +354,8 @@ async def scrape_single_combo_product(url, page, max_products=1):
         return label, products
 
     except Exception as e:
-        print(f"❌ Error fetching combo product: {e}")
+        print(f"❌ Error scraping combo: {e}")
         return "Combo Deal", []
+
 
 
