@@ -111,7 +111,7 @@ async def send_budget_picks():
 
     for category_name, category_url in selected_categories:
         print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_category_products(category_name, category_url, max_results=5)
+        products = await scrape_category_products(category_name, category_url, max_results=10)
 
         budget_product = None
         for product in products:
