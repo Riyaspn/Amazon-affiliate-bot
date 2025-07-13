@@ -296,62 +296,52 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 
 # modules/scraper/combo_scraper.py
 
+import asyncio
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, parse_qs, unquote
-from modules.utils import shorten_url, add_label, ensure_affiliate_tag
+from modules.utils import extract_product_info
+from playwright.async_api import async_playwright
 
-async def scrape_single_combo_product(url, page, max_products=3):
-    await page.goto(url, timeout=60000)
-    await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
-    html = await page.content()
-    soup = BeautifulSoup(html, "html.parser")
+async def scrape_single_combo_product(url, page, max_products=1):
+    try:
+        # Set realistic user-agent and headers to bypass bot detection
+        await page.set_user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+        )
+        await page.set_extra_http_headers({
+            "Accept-Language": "en-US,en;q=0.9"
+        })
 
-    containers = soup.select("div[data-cy='asin-faceout-container']")
-    products = []
+        await page.goto(url, timeout=30000)
+        await page.wait_for_timeout(3000)  # give time for JS to load
 
-    for container in containers:
-        if len(products) >= max_products:
-            break
-
+        # Try default selector first
+        selector = "div[data-cy='asin-faceout-container']"
         try:
-            title_elem = container.select_one("h2 span")
-            price_elem = container.select_one("span.a-price > span.a-offscreen")
-            rating_elem = container.select_one("span.a-icon-alt")
-            image_elem = container.select_one("img")
-            link_elem = container.select_one("a.a-link-normal")
+            await page.wait_for_selector(selector, timeout=10000)
+            product_elements = await page.query_selector_all(selector)
+        except Exception:
+            print("⚠️ Default selector failed. Trying fallback selector...")
+            # Fallback: normal search result structure
+            selector = "div[data-component-type='s-search-result']"
+            await page.wait_for_selector(selector, timeout=10000)
+            product_elements = await page.query_selector_all(selector)
 
-            if not all([title_elem, price_elem, rating_elem, image_elem, link_elem]):
-                continue
+        products = []
+        for elem in product_elements:
+            html_content = await elem.inner_html()
+            soup = BeautifulSoup(html_content, "html.parser")
+            product = extract_product_info(soup)
+            if product:
+                products.append(product)
+            if len(products) >= max_products:
+                break
 
-            title = title_elem.get_text(strip=True)
-            price = price_elem.get_text(strip=True)
-            rating = rating_elem.get_text(strip=True)
-            image = image_elem["src"]
-            url_suffix = link_elem["href"]
+        # Extract category label from URL or fallback
+        label = url.split("k=")[-1].split("&")[0].replace("+", " ").title()
+        return label, products
 
-            if "/sspa/" in url_suffix:
-                continue  # skip sponsored
+    except Exception as e:
+        print(f"❌ Error fetching combo product: {e}")
+        return "Combo Deal", []
 
-            full_url = f"https://www.amazon.in{url_suffix}"
-            affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
-
-            products.append({
-                "title": title,
-                "price": price,
-                "rating": rating,
-                "image": image,
-                "url": affiliate_url,
-                "label": add_label({"price": price, "rating": rating}),
-            })
-
-        except Exception as e:
-            print(f"⚠️ Error parsing product: {e}")
-            continue
-
-    # Use 'k' param from URL for label
-    parsed = urlparse(url)
-    query = parse_qs(parsed.query)
-    raw_label = query.get('k', ['Combo Deal'])[0]
-    label = unquote(raw_label).replace('+', ' ').title()
-
-    return label, products
