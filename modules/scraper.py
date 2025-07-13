@@ -296,16 +296,14 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 
 # modules/scraper/combo_scraper.py
 
+from playwright.async_api import async_playwright
+from modules.utils import apply_affiliate_tag, shorten_url
+from modules.prebuilt import COMBO_DEAL_CATEGORIES
 import random
 import re
-from playwright.async_api import async_playwright
-from modules.prebuilt import COMBO_DEAL_CATEGORIES
-from modules.utils import apply_affiliate_tag, shorten_url
-import asyncio
 
 async def scrape_single_combo_product():
-    category = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
-    label, url = category
+    label, url = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
     print(f"🌐 Visiting: {url}")
 
     user_agent = (
@@ -317,20 +315,21 @@ async def scrape_single_combo_product():
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(user_agent=user_agent, viewport={"width": 1280, "height": 800})
+            context = await browser.new_context(user_agent=user_agent)
             page = await context.new_page()
             await page.goto(url, timeout=60000)
 
-            # Try multiple selector strategies
+            # Try multiple selectors for robustness
             selectors = [
                 "div.s-main-slot div.s-result-item[data-asin][data-component-type='s-search-result']",
-                "div.s-card-container"
+                "div.s-card-container",
+                "div[data-asin]"
             ]
-            products = []
 
+            elements = []
             for selector in selectors:
                 try:
-                    await page.wait_for_selector(selector, timeout=15000)
+                    await page.wait_for_selector(selector, timeout=10000)
                     elements = await page.query_selector_all(selector)
                     if elements:
                         break
@@ -338,16 +337,18 @@ async def scrape_single_combo_product():
                     continue
 
             if not elements:
-                print("⚠️ No valid elements found — capturing screenshot")
+                print("⚠️ No products found. Saving screenshot...")
                 await page.screenshot(path="combo_debug.png", full_page=True)
                 return label, []
 
-            for element in elements:
+            products = []
+
+            for el in elements:
                 try:
-                    title_el = await element.query_selector("h2 span")
-                    price_el = await element.query_selector("span.a-price > span.a-offscreen")
-                    rating_el = await element.query_selector("span.a-icon-alt")
-                    link_el = await element.query_selector("a.a-link-normal")
+                    title_el = await el.query_selector("h2 span")
+                    price_el = await el.query_selector("span.a-price > span.a-offscreen")
+                    rating_el = await el.query_selector("span.a-icon-alt")
+                    link_el = await el.query_selector("a.a-link-normal")
 
                     title = await title_el.inner_text() if title_el else ""
                     price = await price_el.inner_text() if price_el else ""
@@ -357,9 +358,9 @@ async def scrape_single_combo_product():
                     if not (title and price and href):
                         continue
 
-                    url = "https://www.amazon.in" + href.split("?")[0]
-                    url = apply_affiliate_tag(url)
-                    short_url = await shorten_url(url)
+                    clean_url = "https://www.amazon.in" + href.split("?")[0]
+                    affiliate_url = apply_affiliate_tag(clean_url)
+                    short_url = await shorten_url(affiliate_url)
 
                     products.append({
                         "title": title.strip(),
@@ -370,7 +371,7 @@ async def scrape_single_combo_product():
 
                     if len(products) >= 5:
                         break
-                except Exception as e:
+                except Exception:
                     continue
 
             await browser.close()
