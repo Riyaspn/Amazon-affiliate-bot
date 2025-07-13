@@ -294,7 +294,7 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 
 
 
-# modules/scraper/combo_scraper.py
+# combo_scraper
 
 import random
 from playwright.async_api import async_playwright
