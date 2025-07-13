@@ -302,7 +302,7 @@ from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
 async def scrape_single_combo_product(url, page, max_products=3):
     await page.goto(url, timeout=60000)
-    await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=15000)
+    await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
     html = await page.content()
     soup = BeautifulSoup(html, "html.parser")
 
