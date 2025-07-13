@@ -311,7 +311,7 @@ async def scrape_single_combo_product():
     for attempt in range(max_retries):
         try:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.firefox.launch(headless=True)  # 🔁 switched to Firefox
                 context = await browser.new_context(user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -320,7 +320,14 @@ async def scrape_single_combo_product():
                 page = await context.new_page()
                 await page.goto(url, timeout=30000)
                 
-                # Wait for search result cards to appear
+                # 🔁 Scroll to help lazy-load
+                await page.mouse.wheel(0, 3000)
+                await page.wait_for_timeout(2000)
+
+                html = await page.content()
+                print(f"✅ Page loaded: {len(html)} characters")
+
+                # Wait for product results
                 await page.wait_for_selector("div.s-main-slot div.s-result-item[data-asin]", timeout=30000)
                 product_elements = await page.query_selector_all("div.s-main-slot div.s-result-item[data-asin]")
 
@@ -362,10 +369,9 @@ async def scrape_single_combo_product():
 
         except Exception as e:
             print(f"❌ Combo deal error (attempt {attempt + 1}): {e}")
+            await page.screenshot(path=f"combo_error_{attempt + 1}.png")  # 📸 Screenshot
             if attempt == max_retries - 1:
                 return label, []
             await asyncio.sleep(2)
-
-
 
 
