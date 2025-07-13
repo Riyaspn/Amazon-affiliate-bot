@@ -319,36 +319,24 @@ async def scrape_single_combo_product():
             page = await context.new_page()
             await page.goto(url, timeout=60000)
 
-            # Try multiple selectors for robustness
-            selectors = [
+            # Wait for standard search results container
+            await page.wait_for_selector(
                 "div.s-main-slot div.s-result-item[data-asin][data-component-type='s-search-result']",
-                "div.s-card-container",
-                "div[data-asin]"
-            ]
+                timeout=30000,
+            )
 
-            elements = []
-            for selector in selectors:
-                try:
-                    await page.wait_for_selector(selector, timeout=10000)
-                    elements = await page.query_selector_all(selector)
-                    if elements:
-                        break
-                except:
-                    continue
-
-            if not elements:
-                print("⚠️ No products found. Saving screenshot...")
-                await page.screenshot(path="combo_debug.png", full_page=True)
-                return label, []
+            elements = await page.query_selector_all(
+                "div.s-main-slot div.s-result-item[data-asin][data-component-type='s-search-result']"
+            )
 
             products = []
 
-            for el in elements:
+            for el in elements[:10]:  # limit to first 10 for speed
                 try:
                     title_el = await el.query_selector("h2 span")
                     price_el = await el.query_selector("span.a-price > span.a-offscreen")
                     rating_el = await el.query_selector("span.a-icon-alt")
-                    link_el = await el.query_selector("a.a-link-normal")
+                    link_el = await el.query_selector("a.a-link-normal.s-no-outline")
 
                     title = await title_el.inner_text() if title_el else ""
                     price = await price_el.inner_text() if price_el else ""
@@ -362,15 +350,14 @@ async def scrape_single_combo_product():
                     affiliate_url = apply_affiliate_tag(clean_url)
                     short_url = await shorten_url(affiliate_url)
 
-                    products.append({
-                        "title": title.strip(),
-                        "price": price.strip(),
-                        "rating": rating.strip(),
-                        "url": short_url
-                    })
-
-                    if len(products) >= 5:
-                        break
+                    products.append(
+                        {
+                            "title": title.strip(),
+                            "price": price.strip(),
+                            "rating": rating.strip(),
+                            "url": short_url,
+                        }
+                    )
                 except Exception:
                     continue
 
@@ -380,9 +367,10 @@ async def scrape_single_combo_product():
         print(f"❌ Combo deal error: {e}")
         try:
             await page.screenshot(path="combo_debug.png", full_page=True)
-        except:
+        except Exception:
             pass
         return label, []
+
 
 
 
