@@ -95,6 +95,7 @@ async def send_hidden_gem():
 
 
 # 💸 Budget Picks
+# 💸 Budget Picks
 from modules.telegram import send as send_message
 from modules.categories import get_random_rotating_categories
 from modules.scraper import scrape_category_products
@@ -108,24 +109,38 @@ async def send_budget_picks():
     selected_categories = get_random_rotating_categories(n=5)
 
     message = "<b>💸 Budget Picks of the Day (Under ₹999)</b>\n\n"
+    any_product_found = False
 
     for category_name, category_url in selected_categories:
         print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_category_products(category_name, category_url, max_results=10)
+        products = await scrape_category_products(category_name, category_url, max_results=15)
 
+        valid_prices = 0
         budget_product = None
+
         for product in products:
             try:
-                price = float(product['price'].replace("₹", "").replace(",", "").strip())
+                price_text = product.get("price", "").replace("₹", "").replace(",", "").strip()
+                if not price_text or not price_text.replace(".", "", 1).isdigit():
+                    continue
+
+                price = float(price_text)
+                valid_prices += 1
+
                 if price <= 999:
                     budget_product = product
                     break
-            except:
+            except Exception as e:
+                print(f"❌ Error parsing price for {product.get('title', '')[:40]}: {e}")
                 continue
+
+        print(f"✅ {valid_prices} products with valid prices in: {category_name}")
 
         if not budget_product:
             print(f"⚠️ No valid budget product in: {category_name}")
             continue
+
+        any_product_found = True
 
         # Clean and truncate
         short_title = truncate_title(budget_product['title'].replace("🛍️", "").strip())
@@ -140,7 +155,11 @@ async def send_budget_picks():
             f"<a href=\"{final_url}\">🔗 View Deal</a>\n\n"
         )
 
+    if not any_product_found:
+        message += "😔 Couldn't find any deals under ₹999 today. Check back tomorrow!"
+
     await send_message(message.strip(), parse_mode="HTML")
+
 
 
 
