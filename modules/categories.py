@@ -12,7 +12,7 @@ ROTATING_CATEGORIES = {
     "Women’s Fashion": "https://www.amazon.in/gp/bestsellers/apparel/1968023031/",
     "Footwear": "https://www.amazon.in/gp/bestsellers/shoes/",
     "Grocery": "https://www.amazon.in/gp/bestsellers/grocery/",
-    "Books": "https://www.amazon.in/gp/bestsellers/books/",
+    "Books": "https://www.amazon.in/gp/most-gifted/books/ref=zg_bs_tab_t_books_mg",
     "Toys": "https://www.amazon.in/gp/bestsellers/toys/",
     "Office Products": "https://www.amazon.in/s?k=Office+Products&s=exact-aware-popularity-rank&dc&language=en_IN&crid=10BXZMVLO17UB&linkCode=ll2&linkId=6666c1c5932d571ebf4edcd1fd576dec&qid=1752338154&sprefix=office+products%2Caps%2C250&tag=storesofriyas-21&ref=sr_ex_p_n_deal_type_0&ds=v1%3A%2BQTv%2FX7YphDmMvpHHvrfCg7Q%2BkNxEOmcrwPkYIclMls",
     "Home Decor": "https://www.amazon.in/gp/bestsellers/home-improvement/",
