@@ -296,80 +296,75 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 
 # modules/scraper/combo_scraper.py
 
-from playwright.async_api import async_playwright
-from modules.utils import apply_affiliate_tag, shorten_url
-from modules.prebuilt import COMBO_DEAL_CATEGORIES
 import random
-import re
+from playwright.async_api import async_playwright
+from modules.prebuilt import COMBO_DEAL_CATEGORIES
+from modules.utils import apply_affiliate_tag
+import asyncio
 
 async def scrape_single_combo_product():
-    label, url = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
+    combo = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
+    label, url = combo
+
     print(f"🌐 Visiting: {url}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/114.0.0.0 Safari/537.36"
+                ))
+                page = await context.new_page()
+                await page.goto(url, timeout=30000)
+                
+                # Wait for search result cards to appear
+                await page.wait_for_selector("div.s-main-slot div.s-result-item[data-asin]", timeout=30000)
+                product_elements = await page.query_selector_all("div.s-main-slot div.s-result-item[data-asin]")
 
-    user_agent = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    )
+                products = []
+                for el in product_elements:
+                    try:
+                        title_el = await el.query_selector("h2 span")
+                        title = await title_el.inner_text() if title_el else None
 
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(user_agent=user_agent)
-            page = await context.new_page()
-            await page.goto(url, timeout=60000)
+                        price_el = await el.query_selector("span.a-price > span.a-offscreen")
+                        price = await price_el.inner_text() if price_el else None
 
-            # Wait for standard search results container
-            await page.wait_for_selector(
-                "div.s-main-slot div.s-result-item[data-asin][data-component-type='s-search-result']",
-                timeout=30000,
-            )
+                        rating_el = await el.query_selector("i span.a-icon-alt")
+                        rating = await rating_el.inner_text() if rating_el else "N/A"
 
-            elements = await page.query_selector_all(
-                "div.s-main-slot div.s-result-item[data-asin][data-component-type='s-search-result']"
-            )
+                        link_el = await el.query_selector("h2 a")
+                        href = await link_el.get_attribute("href") if link_el else None
+                        url = "https://www.amazon.in" + href if href else None
 
-            products = []
+                        if title and price and url:
+                            products.append({
+                                "title": title.strip(),
+                                "price": price.strip(),
+                                "rating": rating.strip(),
+                                "url": apply_affiliate_tag(url)
+                            })
 
-            for el in elements[:10]:  # limit to first 10 for speed
-                try:
-                    title_el = await el.query_selector("h2 span")
-                    price_el = await el.query_selector("span.a-price > span.a-offscreen")
-                    rating_el = await el.query_selector("span.a-icon-alt")
-                    link_el = await el.query_selector("a.a-link-normal.s-no-outline")
-
-                    title = await title_el.inner_text() if title_el else ""
-                    price = await price_el.inner_text() if price_el else ""
-                    rating = await rating_el.inner_text() if rating_el else "N/A"
-                    href = await link_el.get_attribute("href") if link_el else ""
-
-                    if not (title and price and href):
+                        if len(products) >= 5:
+                            break
+                    except:
                         continue
 
-                    clean_url = "https://www.amazon.in" + href.split("?")[0]
-                    affiliate_url = apply_affiliate_tag(clean_url)
-                    short_url = await shorten_url(affiliate_url)
+                await browser.close()
+                if products:
+                    return label, products
+                else:
+                    print("⚠️ No valid combo products found.")
+                    return label, []
 
-                    products.append(
-                        {
-                            "title": title.strip(),
-                            "price": price.strip(),
-                            "rating": rating.strip(),
-                            "url": short_url,
-                        }
-                    )
-                except Exception:
-                    continue
-
-            await browser.close()
-            return label, products
-    except Exception as e:
-        print(f"❌ Combo deal error: {e}")
-        try:
-            await page.screenshot(path="combo_debug.png", full_page=True)
-        except Exception:
-            pass
-        return label, []
+        except Exception as e:
+            print(f"❌ Combo deal error (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                return label, []
+            await asyncio.sleep(2)
 
 
 
