@@ -47,3 +47,11 @@ jobs:
             echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
             python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
           fi
+
+
+- name: Upload Combo Screenshot (if exists)
+  if: always()
+  uses: actions/upload-artifact@v3
+  with:
+    name: combo-debug
+    path: combo_debug.png
