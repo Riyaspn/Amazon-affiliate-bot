@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-
-  schedule:
-    - cron: "03 3,15 * * *" # 9:03 AM and 9:03 PM IST
-
   workflow_dispatch:
     inputs:
       day:
@@ -20,7 +16,7 @@ on:
         default: ''
 
 jobs:
-  scrape-firefox:
+  run:
     runs-on: ubuntu-latest
 
     env:
@@ -28,56 +24,33 @@ jobs:
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: 3.11
 
-      - name: Install system dependencies for Firefox Playwright
+      - name: Install system dependencies for Firefox
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-4-1 libdbus-glib-1-2 libxt6 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 \
-            libpangocairo-1.0-0 libcups2 libdrm2 libxshmfence1 libnspr4 libnss3 libwayland-client0 \
-            libwayland-cursor0 libwayland-egl1 libegl1 libx11-xcb1 libxcb1 libxfixes3 libxrender1 libxext6 libexpat1
+            libgtk-4-1 libdbus-glib-1-2 libxt6 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 libcups2 libdrm2 libxshmfence1 libnspr4 libnss3 libwayland-client0 libwayland-cursor0 libwayland-egl1 libegl1 libx11-xcb1 libxcb1 libxfixes3 libxrender1 libxext6 libexpat1
 
-      - name: Remove Playwright cache (force fresh install)
+      - name: Clean Playwright cache
         run: rm -rf ~/.cache/ms-playwright
 
-      - name: Install Python dependencies
+      - name: Install Python dependencies and Playwright browser
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          python -m playwright install firefox
 
-      - name: Install Playwright Firefox browser
-        run: python -m playwright install firefox
-
-      - name: Determine fallback day/time
-        id: set-params
+      - name: Run affiliate bot script
         run: |
-          DAY_INPUT="${{ github.event.inputs.day }}"
-          TIME_INPUT="${{ github.event.inputs.time_of_day }}"
-
-          if [ -z "$DAY_INPUT" ]; then
-            DAY_INPUT=$(date +%A)
+          if [ -z "${{ github.event.inputs.day }}" ]; then
+            echo "🟢 Running with system time"
+            python main.py
+          else
+            echo "🟡 Manual input: ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
+            python main.py --day "${{ github.event.inputs.day }}" --time_of_day "${{ github.event.inputs.time_of_day }}"
           fi
-
-          if [ -z "$TIME_INPUT" ]; then
-            HOUR=$(date +%H)
-            if [ "$HOUR" -lt 15 ]; then
-              TIME_INPUT="morning"
-            else
-              TIME_INPUT="evening"
-            fi
-          fi
-
-          echo "day=$DAY_INPUT" >> $GITHUB_OUTPUT
-          echo "time_of_day=$TIME_INPUT" >> $GITHUB_OUTPUT
-
-      - name: Run Affiliate Bot
-        run: |
-          echo "🟡 Running for ${{ steps.set-params.outputs.day }} ${{ steps.set-params.outputs.time_of_day }}"
-          python main.py --day "${{ steps.set-params.outputs.day }}" --time_of_day "${{ steps.set-params.outputs.time_of_day }}"
