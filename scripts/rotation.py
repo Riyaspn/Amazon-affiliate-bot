@@ -211,7 +211,7 @@ async def send_combo_deal(max_products=1):
         print(f"🌐 Visiting: {category_url}")
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.firefox.launch(headless=True)
             page = await browser.new_page()
             label, all_products = await scrape_single_combo_product(category_url)
             await browser.close()
