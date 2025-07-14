@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the Week (e.g., Monday)'
+        description: 'Day of the Week (e.g., Sunday)'
         required: false
       time_of_day:
         description: 'Time of Day (morning/evening)'
         required: false
+
   schedule:
     - cron: '30 3 * * *'     # Daily 9:00 AM IST
     - cron: '30 15 * * *'    # Daily 9:00 PM IST
