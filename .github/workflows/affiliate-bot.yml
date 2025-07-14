@@ -10,8 +10,8 @@ on:
         description: 'Time of Day (morning/evening)'
         required: false
   schedule:
-    - cron: '30 3 * * *'     # 9:00 AM IST (3:30 UTC)
-    - cron: '30 15 * * *'    # 9:00 PM IST (15:30 UTC)
+    - cron: '30 3 * * *'     # 9:00 AM IST
+    - cron: '30 15 * * *'    # 9:00 PM IST
 
 jobs:
   run-bot:
@@ -37,18 +37,15 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          INPUT_DAY: ${{ github.event.inputs.day }}
-          INPUT_TIME: ${{ github.event.inputs.time_of_day }}
         run: |
-          day="${INPUT_DAY:-}"
-          time="${INPUT_TIME:-}"
+          day="${{ github.event.inputs.day || '' }}"
+          time="${{ github.event.inputs.time_of_day || '' }}"
           if [ -z "$day" ]; then
             echo "🟡 No manual input — running scheduled default"
             python main.py
           else
             echo "🟡 Manual input provided — running for $day $time"
             python main.py "$day" "$time"
-          fi
 
       - name: Upload Combo Screenshot (if exists)
         if: always()
