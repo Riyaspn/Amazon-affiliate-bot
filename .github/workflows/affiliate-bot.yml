@@ -1,3 +1,20 @@
+name: Run Amazon Affiliate Bot
+
+on:
+  schedule:
+    - cron: '30 3 * * *'     # Daily 9:00 AM IST
+    - cron: '30 15 * * *'    # Daily 9:00 PM IST
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Day of the week (e.g. Monday)'
+        required: false
+        default: ''
+      time_of_day:
+        description: 'Time of day: morning or evening'
+        required: false
+        default: ''
+
 jobs:
   run:
     runs-on: ubuntu-latest
