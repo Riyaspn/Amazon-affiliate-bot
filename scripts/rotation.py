@@ -193,17 +193,11 @@ async def send_product_of_day():
 
 
 #Combo deals
-import html
-from modules.utils import escape_caption_html
-from modules.prebuilt import get_random_combo_category
 from modules.scraper import scrape_single_combo_product
+from modules.prebuilt import get_random_combo_category
 from modules.telegram import send_html, send_photo
+from modules.utils import truncate_markdown
 from playwright.async_api import async_playwright
-
-def truncate_markdown(text, limit=80):
-    text = text.strip()
-    text = text[:limit].rsplit(' ', 1)[0]
-    return text + "..." if len(text) >= limit else text
 
 async def send_combo_deal(max_products=1):
     try:
@@ -212,9 +206,19 @@ async def send_combo_deal(max_products=1):
 
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
-            page = await browser.new_page()
-            label, all_products = await scrape_single_combo_product(category_url)
-            await browser.close()
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800}
+            )
+            page = await context.new_page()
+
+            try:
+                label, all_products = await scrape_single_combo_product(category_url, page)
+            except Exception as e:
+                await page.screenshot(path="combo_debug.png")
+                raise e
+            finally:
+                await browser.close()
 
         if not all_products:
             await send_html("⚠️ No combo deal found.")
