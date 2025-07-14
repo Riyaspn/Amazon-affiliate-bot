@@ -31,7 +31,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           sudo apt-get install -y libnss3
-          python -m playwright install
+          python -m playwright install chromium
 
       - name: Run main.py
         env:
