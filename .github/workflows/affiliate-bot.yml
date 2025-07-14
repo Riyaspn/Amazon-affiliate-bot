@@ -1,9 +1,9 @@
-name: Run Amazon Affiliate Bot (Firefox)
+name: Run Amazon Affiliate Bot
 
 on:
   schedule:
-    - cron: '30 3 * * *'     # 9:00 AM IST
-    - cron: '30 15 * * *'    # 9:00 PM IST
+    - cron: '30 3 * * *'     # Daily 9:00 AM IST
+    - cron: '30 15 * * *'    # Daily 9:00 PM IST
   workflow_dispatch:
     inputs:
       day:
@@ -17,7 +17,7 @@ on:
 
 jobs:
   run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -27,31 +27,18 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      - name: Install system dependencies for Firefox Playwright
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-0 libxss1 libasound2 libdbus-glib-1-2 libxt6 libxcomposite1 \
-            libxdamage1 libxrandr2 libgbm1 libnss3 libatk1.0-0 libcups2 \
-            libdrm2 libxshmfence1 libnspr4 libx11-xcb1 libxcb1 libxfixes3 \
-            libxrender1 libxext6 libexpat1 libwayland-client0 libwayland-cursor0 libwayland-egl1 \
-            fonts-liberation libappindicator3-1 xdg-utils wget
-
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          python -m playwright install
 
-      - name: Install Playwright (Firefox only)
-        run: |
-          python -m playwright install --with-deps
-
-      - name: Run main.py with optional inputs
+      - name: Run main.py with optional args
         run: |
           if [ -z "${{ github.event.inputs.day }}" ]; then
             echo "🟢 No manual inputs — running with system time"
