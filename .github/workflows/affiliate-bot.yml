@@ -1,20 +1,3 @@
-name: Run Amazon Affiliate Bot
-
-on:
-  schedule:
-    - cron: '30 3 * * *'     # Daily 9:00 AM IST
-    - cron: '30 15 * * *'    # Daily 9:00 PM IST
-  workflow_dispatch:
-    inputs:
-      day:
-        description: 'Day of the week (e.g. Monday)'
-        required: false
-        default: ''
-      time_of_day:
-        description: 'Time of day: morning or evening'
-        required: false
-        default: ''
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -27,6 +10,28 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Install system dependencies for Playwright browsers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-4-1 \
+            libgraphene-1.0-0 \
+            libwoff2-1 \
+            libvpx9 \
+            libevent-2.1-7 \
+            libopus0 \
+            gstreamer1.0-libav \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-tools \
+            gstreamer1.0-x \
+            libsecret-1-0 \
+            libhyphen0 \
+            libgstreamer-plugins-base1.0-0 \
+            libx264-163
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -36,7 +41,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install
           python -m playwright install firefox
 
       - name: Run main.py with optional args
