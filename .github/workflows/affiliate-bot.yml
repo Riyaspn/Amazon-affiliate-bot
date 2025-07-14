@@ -1,69 +1,57 @@
-name: Run Amazon Affiliate Bot
+name: Amazon Affiliate Bot - Firefox Scrape
 
 on:
+  push:
+    branches:
+      - main
+
   schedule:
-    - cron: '30 3 * * *'     # Daily 9:00 AM IST
-    - cron: '30 15 * * *'    # Daily 9:00 PM IST
+    - cron: "03 3,15 * * *" # Run at 9:03 AM and 9:03 PM IST (3:33 and 15:33 UTC)
+
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the week (e.g. Monday)'
+        description: 'Day of the week (e.g., Monday, Tuesday...)'
         required: false
         default: ''
       time_of_day:
-        description: 'Time of day: morning or evening'
+        description: 'Time of day (morning/evening)'
         required: false
         default: ''
 
 jobs:
-  run:
+  scrape-firefox:
     runs-on: ubuntu-latest
-
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install system dependencies for Playwright Firefox
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies for Firefox Playwright
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-4-1 \
-            libgraphene-1.0-0 \
-            libvpx9 \
-            libevent-2.1-7 \
-            libopus0 \
-            gstreamer1.0-libav \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            gstreamer1.0-plugins-bad \
-            gstreamer1.0-plugins-ugly \
-            gstreamer1.0-tools \
-            gstreamer1.0-x \
-            libsecret-1-0 \
-            libhyphen0 \
-            libgstreamer-plugins-base1.0-0
+            libgtk-4-1 libdbus-glib-1-2 libxt6 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2 \
+            libpangocairo-1.0-0 libcups2 libdrm2 libxshmfence1 libnspr4 libnss3 libwayland-client0 \
+            libwayland-cursor0 libwayland-egl1 libegl1 libx11-xcb1 libxcb1 libxfixes3 libxrender1 libxext6 libexpat1
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
+      - name: Remove Playwright cache (force fresh install)
+        run: rm -rf ~/.cache/ms-playwright
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install firefox
 
-      - name: Run main.py with optional args
+      - name: Install Playwright Firefox browser
+        run: python -m playwright install firefox
+
+      - name: Run Affiliate Bot
         run: |
-          if [ -z "${{ github.event.inputs.day }}" ]; then
-            echo "🟢 No manual inputs — running with system time"
-            python main.py
-          else
-            echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
-            python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
-          fi
+          echo "🟡 Manual input provided — running for ${{ inputs.day }} ${{ inputs.time_of_day }}"
+          python main.py --day "${{ inputs.day }}" --time_of_day "${{ inputs.time_of_day }}"
