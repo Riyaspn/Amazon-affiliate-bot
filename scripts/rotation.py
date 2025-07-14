@@ -213,7 +213,7 @@ async def send_combo_deal(max_products=1):
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
-            label, all_products = await scrape_single_combo_product(category_url, page, max_products)
+            label, all_products = await scrape_single_combo_product(category_url)
             await browser.close()
 
         if not all_products:
