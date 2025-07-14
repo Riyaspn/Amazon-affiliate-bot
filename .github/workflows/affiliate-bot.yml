@@ -49,7 +49,7 @@ jobs:
 
       - name: Install Playwright (Firefox only)
         run: |
-          python -m playwright install firefox
+          python -m playwright install --with-deps
 
       - name: Run main.py with optional inputs
         run: |
