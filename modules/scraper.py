@@ -302,7 +302,7 @@ from modules.prebuilt import COMBO_DEAL_CATEGORIES
 from modules.utils import apply_affiliate_tag
 import asyncio
 
-async def scrape_single_combo_product():
+async def scrape_single_combo_product(category_url):
     combo = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
     label, url = combo
 
