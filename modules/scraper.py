@@ -307,27 +307,35 @@ async def scrape_single_combo_product(category_url):
     label, url = combo
 
     print(f"🌐 Visiting: {url}")
-    max_retries = 3
-    for attempt in range(max_retries):
+    max_retries = 4
+
+    for attempt in range(1, max_retries + 1):
         try:
             async with async_playwright() as p:
-                browser = await p.firefox.launch(headless=True)  # 🔁 switched to Firefox
+                browser = await p.firefox.launch(headless=True)
                 context = await browser.new_context(user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/114.0.0.0 Safari/537.36"
                 ))
                 page = await context.new_page()
-                await page.goto(url, timeout=30000)
-                
-                # 🔁 Scroll to help lazy-load
+
+                await page.goto(url, timeout=60000)
+                await page.wait_for_timeout(3000)
+
+                # Force scroll to trigger lazy load
                 await page.mouse.wheel(0, 3000)
-                await page.wait_for_timeout(2000)
+                await page.wait_for_timeout(3000)
 
                 html = await page.content()
                 print(f"✅ Page loaded: {len(html)} characters")
+                if "captcha" in html.lower():
+                    print("⚠️ Captcha detected. Aborting.")
+                    await page.screenshot(path=f"combo_error_captcha_{attempt}.png")
+                    await browser.close()
+                    return label, []
 
-                # Wait for product results
+                # Wait for products to appear
                 await page.wait_for_selector("div.s-main-slot div.s-result-item[data-asin]", timeout=30000)
                 product_elements = await page.query_selector_all("div.s-main-slot div.s-result-item[data-asin]")
 
@@ -347,20 +355,26 @@ async def scrape_single_combo_product(category_url):
                         href = await link_el.get_attribute("href") if link_el else None
                         url = "https://www.amazon.in" + href if href else None
 
+                        image_el = await el.query_selector("img.s-image")
+                        image = await image_el.get_attribute("src") if image_el else ""
+
                         if title and price and url:
                             products.append({
                                 "title": title.strip(),
                                 "price": price.strip(),
                                 "rating": rating.strip(),
-                                "url": apply_affiliate_tag(url)
+                                "url": apply_affiliate_tag(url),
+                                "image": image
                             })
 
                         if len(products) >= 5:
                             break
-                    except:
+                    except Exception as inner_e:
+                        print(f"⚠️ Product parse error: {inner_e}")
                         continue
 
                 await browser.close()
+
                 if products:
                     return label, products
                 else:
@@ -368,10 +382,12 @@ async def scrape_single_combo_product(category_url):
                     return label, []
 
         except Exception as e:
-            print(f"❌ Combo deal error (attempt {attempt + 1}): {e}")
-            await page.screenshot(path=f"combo_error_{attempt + 1}.png")  # 📸 Screenshot
-            if attempt == max_retries - 1:
-                return label, []
+            print(f"❌ Combo deal error (attempt {attempt}): {e}")
+            try:
+                await page.screenshot(path=f"combo_error_{attempt}.png")
+            except:
+                print("⚠️ Could not take screenshot.")
             await asyncio.sleep(2)
 
+    return label, []
 
