@@ -4,15 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the Week (e.g., Sunday)'
+        description: 'Day of the Week (e.g., Monday)'
         required: false
       time_of_day:
         description: 'Time of Day (morning/evening)'
         required: false
-
   schedule:
-    - cron: '30 3 * * *'     # Daily 9:00 AM IST
-    - cron: '30 15 * * *'    # Daily 9:00 PM IST
+    - cron: '30 3 * * *'     # 9:00 AM IST (3:30 UTC)
+    - cron: '30 15 * * *'    # 9:00 PM IST (15:30 UTC)
 
 jobs:
   run-bot:
@@ -25,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
