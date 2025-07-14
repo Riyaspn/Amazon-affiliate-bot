@@ -6,12 +6,12 @@ on:
       - main
 
   schedule:
-    - cron: "03 3,15 * * *" # 9:03 AM & 9:03 PM IST (3:03 and 15:03 UTC)
+    - cron: "03 3,15 * * *" # 9:03 AM and 9:03 PM IST
 
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the week (e.g., Monday, Tuesday...)'
+        description: 'Day of the week (e.g., Monday)'
         required: false
         default: ''
       time_of_day:
@@ -55,7 +55,29 @@ jobs:
       - name: Install Playwright Firefox browser
         run: python -m playwright install firefox
 
+      - name: Determine fallback day/time
+        id: set-params
+        run: |
+          DAY_INPUT="${{ github.event.inputs.day }}"
+          TIME_INPUT="${{ github.event.inputs.time_of_day }}"
+
+          if [ -z "$DAY_INPUT" ]; then
+            DAY_INPUT=$(date +%A)
+          fi
+
+          if [ -z "$TIME_INPUT" ]; then
+            HOUR=$(date +%H)
+            if [ "$HOUR" -lt 15 ]; then
+              TIME_INPUT="morning"
+            else
+              TIME_INPUT="evening"
+            fi
+          fi
+
+          echo "day=$DAY_INPUT" >> $GITHUB_OUTPUT
+          echo "time_of_day=$TIME_INPUT" >> $GITHUB_OUTPUT
+
       - name: Run Affiliate Bot
         run: |
-          echo "🟡 Manual input provided — running for ${{ inputs.day }} ${{ inputs.time_of_day }}"
-          python main.py --day "${{ inputs.day }}" --time_of_day "${{ inputs.time_of_day }}"
+          echo "🟡 Running for ${{ steps.set-params.outputs.day }} ${{ steps.set-params.outputs.time_of_day }}"
+          python main.py --day "${{ steps.set-params.outputs.day }}" --time_of_day "${{ steps.set-params.outputs.time_of_day }}"
