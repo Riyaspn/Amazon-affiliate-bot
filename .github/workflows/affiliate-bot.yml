@@ -27,13 +27,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install system dependencies for Playwright browsers
+      - name: Install system dependencies for Playwright Firefox
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-4-1 \
             libgraphene-1.0-0 \
-            libwoff2-1 \
             libvpx9 \
             libevent-2.1-7 \
             libopus0 \
@@ -46,8 +45,7 @@ jobs:
             gstreamer1.0-x \
             libsecret-1-0 \
             libhyphen0 \
-            libgstreamer-plugins-base1.0-0 \
-            libx264-163
+            libgstreamer-plugins-base1.0-0
 
       - name: Set up Python
         uses: actions/setup-python@v4
