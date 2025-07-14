@@ -296,98 +296,63 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 
 # combo_scraper
 
-import random
-from playwright.async_api import async_playwright
-from modules.prebuilt import COMBO_DEAL_CATEGORIES
-from modules.utils import apply_affiliate_tag
-import asyncio
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs, unquote
+from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
-async def scrape_single_combo_product(category_url):
-    combo = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
-    label, url = combo
+async def scrape_single_combo_product(url, page, max_products=3):
+    await page.goto(url, timeout=60000)
+    await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=15000)
+    html = await page.content()
+    soup = BeautifulSoup(html, "html.parser")
 
-    print(f"🌐 Visiting: {url}")
-    max_retries = 4
+    containers = soup.select("div[data-cy='asin-faceout-container']")
+    products = []
 
-    for attempt in range(1, max_retries + 1):
+    for container in containers:
+        if len(products) >= max_products:
+            break
+
         try:
-            async with async_playwright() as p:
-                browser = await p.firefox.launch(headless=True)
-                context = await browser.new_context(user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/114.0.0.0 Safari/537.36"
-                ))
-                page = await context.new_page()
+            title_elem = container.select_one("h2 span")
+            price_elem = container.select_one("span.a-price > span.a-offscreen")
+            rating_elem = container.select_one("span.a-icon-alt")
+            image_elem = container.select_one("img")
+            link_elem = container.select_one("a.a-link-normal")
 
-                await page.goto(url, timeout=60000)
-                await page.wait_for_timeout(3000)
+            if not all([title_elem, price_elem, rating_elem, image_elem, link_elem]):
+                continue
 
-                # Force scroll to trigger lazy load
-                await page.mouse.wheel(0, 3000)
-                await page.wait_for_timeout(3000)
+            title = title_elem.get_text(strip=True)
+            price = price_elem.get_text(strip=True)
+            rating = rating_elem.get_text(strip=True)
+            image = image_elem["src"]
+            url_suffix = link_elem["href"]
 
-                html = await page.content()
-                print(f"✅ Page loaded: {len(html)} characters")
-                if "captcha" in html.lower():
-                    print("⚠️ Captcha detected. Aborting.")
-                    await page.screenshot(path=f"combo_error_captcha_{attempt}.png")
-                    await browser.close()
-                    return label, []
+            if "/sspa/" in url_suffix:
+                continue  # skip sponsored
 
-                # Wait for products to appear
-                await page.wait_for_selector("div.s-main-slot div.s-result-item[data-asin]", timeout=30000)
-                product_elements = await page.query_selector_all("div.s-main-slot div.s-result-item[data-asin]")
+            full_url = f"https://www.amazon.in{url_suffix}"
+            affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
 
-                products = []
-                for el in product_elements:
-                    try:
-                        title_el = await el.query_selector("h2 span")
-                        title = await title_el.inner_text() if title_el else None
-
-                        price_el = await el.query_selector("span.a-price > span.a-offscreen")
-                        price = await price_el.inner_text() if price_el else None
-
-                        rating_el = await el.query_selector("i span.a-icon-alt")
-                        rating = await rating_el.inner_text() if rating_el else "N/A"
-
-                        link_el = await el.query_selector("h2 a")
-                        href = await link_el.get_attribute("href") if link_el else None
-                        url = "https://www.amazon.in" + href if href else None
-
-                        image_el = await el.query_selector("img.s-image")
-                        image = await image_el.get_attribute("src") if image_el else ""
-
-                        if title and price and url:
-                            products.append({
-                                "title": title.strip(),
-                                "price": price.strip(),
-                                "rating": rating.strip(),
-                                "url": apply_affiliate_tag(url),
-                                "image": image
-                            })
-
-                        if len(products) >= 5:
-                            break
-                    except Exception as inner_e:
-                        print(f"⚠️ Product parse error: {inner_e}")
-                        continue
-
-                await browser.close()
-
-                if products:
-                    return label, products
-                else:
-                    print("⚠️ No valid combo products found.")
-                    return label, []
+            products.append({
+                "title": title,
+                "price": price,
+                "rating": rating,
+                "image": image,
+                "url": affiliate_url,
+                "label": add_label({"price": price, "rating": rating}),
+            })
 
         except Exception as e:
-            print(f"❌ Combo deal error (attempt {attempt}): {e}")
-            try:
-                await page.screenshot(path=f"combo_error_{attempt}.png")
-            except:
-                print("⚠️ Could not take screenshot.")
-            await asyncio.sleep(2)
+            print(f"⚠️ Error parsing product: {e}")
+            continue
 
-    return label, []
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    raw_label = query.get('k', ['Combo Deal'])[0]
+    label = unquote(raw_label).replace('+', ' ').title()
+
+    return label, products
+
 
