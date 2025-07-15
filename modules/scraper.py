@@ -26,28 +26,24 @@ async def scrape_bestsellers(category_name, url, max_products=40):
     seen_asins = set()
 
     async with async_playwright() as p:
-        browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        context = await browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        viewport={"width": 1280, "height": 800},
-        java_script_enabled=True)
+        browser, context = await get_browser_context(p)
         page = await context.new_page()
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=30000)
         except Exception as e:
-            print(f"⚠️ Timeout or primary selector issue for {category_name}: {e}")
-            # fallback selector (Amazon might change class names)
+            print(f"⚠️ Primary selector failed for {category_name}: {e}")
             try:
-                await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=10000)
+                await page.wait_for_selector("div.zg-grid-general-faceout", timeout=10000)
             except Exception as fallback:
                 print(f"⚠️ Fallback selector also failed for {category_name}: {fallback}")
                 await browser.close()
                 return []
 
-        cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout")
+        cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout") or \
+                await page.query_selector_all("div.zg-grid-general-faceout")
+
         for card in cards:
             try:
                 title_elem = await card.query_selector("._cDEzb_p13n-sc-css-line-clamp-4_2q2cc") or \
@@ -91,6 +87,7 @@ async def scrape_bestsellers(category_name, url, max_products=40):
 
         await browser.close()
         return products
+
 
 
 
@@ -235,27 +232,24 @@ from modules.utils import ensure_affiliate_tag
 async def scrape_product_of_the_day():
     from bs4 import BeautifulSoup
     import random
-    import re
 
     url = "https://www.amazon.in/s?i=stripbooks&rh=n%3A1318128031&s=popularity-rank&fs=true&ref=lp_1318128031_sar"
 
     async with async_playwright() as p:
-        browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 800},
-            java_script_enabled=True
-        )
+        browser, context = await get_browser_context(p)
         page = await context.new_page()
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
             await page.wait_for_selector("div.s-main-slot", timeout=60000)
         except Exception as e:
-            print(f"⚠️ Product of the Day: Timeout or selector error: {e}")
-            await browser.close()
-            return None
+            print(f"⚠️ Primary selector failed for Product of the Day: {e}")
+            try:
+                await page.wait_for_selector("div.s-result-item", timeout=10000)
+            except Exception as fallback:
+                print(f"⚠️ Fallback selector also failed for Product of the Day: {fallback}")
+                await browser.close()
+                return None
 
         html = await page.content()
         await browser.close()
@@ -294,6 +288,7 @@ async def scrape_product_of_the_day():
         })
 
     return random.choice(books) if books else None
+
 
 
 
