@@ -103,14 +103,22 @@ from playwright.async_api import async_playwright
 
 from modules.scraper import get_browser_type, get_browser_context
 
+from modules.browser import get_browser_type
+
 async def get_soup_from_url(url: str):
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
-            browser, context = await get_browser_context(p)
+            browser_type = get_browser_type(p)  # dynamically choose chromium on GitHub Actions
+            browser = await browser_type.launch(headless=True)
+            context = await browser.new_context(
+                java_script_enabled=True,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/112.0.0.0 Safari/537.36"
+            )
             page = await context.new_page()
 
-            await page.goto(url, timeout=60000)  # 60s timeout
+            await page.goto(url, timeout=60000, wait_until="networkidle")
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=15000)
 
             html = await page.content()
@@ -120,6 +128,7 @@ async def get_soup_from_url(url: str):
     except Exception as e:
         print(f"❌ Error fetching URL: {url}\n{e}")
         return None
+
 
 
 
