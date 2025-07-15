@@ -27,17 +27,24 @@ async def scrape_bestsellers(category_name, url, max_products=40):
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser, context = await get_browser_context(p)
-        page = await context.new_page()
-        
+        browser = await browser_type.launch(headless=True)
+        page = await browser.new_page(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800}
+        )
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=30000)
-        except:
-            print(f"⚠️ Timeout or selector issue for {category_name}")
-            await browser.close()
-            return []
+        except Exception as e:
+            print(f"⚠️ Timeout or primary selector issue for {category_name}: {e}")
+            # fallback selector (Amazon might change class names)
+            try:
+                await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=10000)
+            except Exception as fallback:
+                print(f"⚠️ Fallback selector also failed for {category_name}: {fallback}")
+                await browser.close()
+                return []
 
         cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout")
         for card in cards:
@@ -48,7 +55,6 @@ async def scrape_bestsellers(category_name, url, max_products=40):
                     continue
 
                 title = (await title_elem.inner_text()).strip()
-
                 link_elem = await card.query_selector("a")
                 link = await link_elem.get_attribute("href")
                 asin_match = re.search(r"/dp/([A-Z0-9]{10})", link)
@@ -61,13 +67,11 @@ async def scrape_bestsellers(category_name, url, max_products=40):
 
                 full_link = f"https://www.amazon.in/dp/{asin}?tag={AFFILIATE_TAG}&th=1"
 
-                # ✅ Fallback price selectors
                 price_elem = await card.query_selector("span._cDEzb_p13n-sc-price_3mJ9Z") or \
                              await card.query_selector("span.a-color-price") or \
                              await card.query_selector("span.a-price-whole")
 
                 price = (await price_elem.inner_text()).strip() if price_elem else "N/A"
-
                 rating_elem = await card.query_selector("span.a-icon-alt")
                 rating = (await rating_elem.inner_text()).strip() if rating_elem else "N/A"
 
@@ -86,6 +90,7 @@ async def scrape_bestsellers(category_name, url, max_products=40):
 
         await browser.close()
         return products
+
 
 
 async def scrape_prebuilt_category(url, max_products=10):
@@ -235,11 +240,22 @@ async def scrape_product_of_the_day():
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser, context = await get_browser_context(p)
+        browser = await browser_type.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800},
+            java_script_enabled=True
+        )
         page = await context.new_page()
-
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
-        await page.wait_for_selector("div.s-main-slot", timeout=60000)
+
+        try:
+            await page.wait_for_selector("div.s-main-slot", timeout=60000)
+        except Exception as e:
+            print(f"⚠️ Product of the Day: Timeout or selector error: {e}")
+            await browser.close()
+            return None
+
         html = await page.content()
         await browser.close()
 
@@ -253,23 +269,18 @@ async def scrape_product_of_the_day():
         if not asin or len(asin) != 10:
             continue
 
-        # Title
         title_tag = card.select_one("h2 span")
         title = title_tag.text.strip() if title_tag else "N/A"
 
-        # Price
         price_tag = card.select_one("span.a-price span.a-offscreen")
         price = price_tag.text.strip() if price_tag else "N/A"
 
-        # Rating
         rating_tag = card.select_one("span.a-icon-alt")
         rating = rating_tag.text.strip() if rating_tag else "N/A"
 
-        # Image
         img_tag = card.select_one("img.s-image")
         image_url = img_tag['src'] if img_tag else ""
 
-        # Build full URL
         product_url = f"https://www.amazon.in/dp/{asin}?tag=storesofriyas-21"
 
         books.append({
@@ -282,6 +293,7 @@ async def scrape_product_of_the_day():
         })
 
     return random.choice(books) if books else None
+
 
 
 
