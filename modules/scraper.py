@@ -16,7 +16,8 @@ async def scrape_bestsellers(category_name, url, max_products=40):
     seen_asins = set()
 
     async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True)
+        browser_type = get_browser_type(p)
+        browser = await browser_type.launch(headless=True)
         page = await browser.new_page()
         await page.goto(url, timeout=60000)
 
@@ -81,7 +82,8 @@ async def scrape_prebuilt_category(url, max_products=10):
     products = []
 
     async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True)
+        browser_type = get_browser_type(p)
+        browser = await browser_type.launch(headless=True)
         page = await browser.new_page()
         await page.goto(url, timeout=60000)
 
@@ -220,7 +222,8 @@ async def scrape_product_of_the_day():
     url = "https://www.amazon.in/s?i=stripbooks&rh=n%3A1318128031&s=popularity-rank&fs=true&ref=lp_1318128031_sar"
 
     async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True)
+        browser_type = get_browser_type(p)
+        browser = await browser_type.launch(headless=True)
         page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", viewport={"width": 1280, "height": 800})
         await page.goto(url, timeout=60000)
         await page.wait_for_selector("div.s-main-slot", timeout=60000)
