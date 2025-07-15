@@ -205,8 +205,10 @@ async def send_combo_deal(max_products=1):
         category_name, category_url = get_random_combo_category()
         print(f"🌐 Visiting: {category_url}")
 
+        from modules.scraper import get_browser_type
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser_type = get_browser_type(p)
+            browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                 viewport={"width": 1280, "height": 800},
