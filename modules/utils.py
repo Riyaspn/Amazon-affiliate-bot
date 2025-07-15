@@ -101,11 +101,13 @@ def convert_price_to_float(price_str):
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
+from modules.scraper import get_browser_type, get_browser_context
+
 async def get_soup_from_url(url: str):
     try:
         async with async_playwright() as p:
-            browser = await p.firefox.launch(headless=True)
-            context = await browser.new_context()
+            browser_type = get_browser_type(p)
+            browser, context = await get_browser_context(p)
             page = await context.new_page()
 
             await page.goto(url, timeout=60000)  # 60s timeout
@@ -118,6 +120,7 @@ async def get_soup_from_url(url: str):
     except Exception as e:
         print(f"❌ Error fetching URL: {url}\n{e}")
         return None
+
 
 
 def shorten_url(url):
