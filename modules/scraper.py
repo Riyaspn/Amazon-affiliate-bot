@@ -19,10 +19,10 @@ async def scrape_bestsellers(category_name, url, max_products=40):
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(url, timeout=60000)
+        await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
-            await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=25000)
+            await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=30000)
         except:
             print(f"⚠️ Timeout or selector issue for {category_name}")
             await browser.close()
@@ -85,10 +85,10 @@ async def scrape_prebuilt_category(url, max_products=10):
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(url, timeout=60000)
+        await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
-            await page.wait_for_selector("div.s-result-item", timeout=20000)
+            await page.wait_for_selector("div.s-result-item", timeout=30000)
         except:
             print("⚠️ Selector timeout — no products found.")
             await browser.close()
@@ -225,7 +225,7 @@ async def scrape_product_of_the_day():
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
         page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", viewport={"width": 1280, "height": 800})
-        await page.goto(url, timeout=60000)
+        await page.goto(url, timeout=120000, wait_until="domcontentloaded")
         await page.wait_for_selector("div.s-main-slot", timeout=60000)
         html = await page.content()
         await browser.close()
@@ -308,10 +308,10 @@ from urllib.parse import urlparse, parse_qs, unquote
 from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
 async def scrape_single_combo_product(url, page, max_products=3):
-    await page.goto(url, timeout=60000)
+    await page.goto(url, timeout=120000, wait_until="domcontentloaded")
     try:
         # Primary selector used by combo pages
-        await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=15000)
+        await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
     except:
         print("⚠️ Primary combo selector not found — trying fallback...")
         # Let the calling function handle retry/fallback
