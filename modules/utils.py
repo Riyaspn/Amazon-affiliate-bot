@@ -171,4 +171,8 @@ def normalize_text(text):
     text = unicodedata.normalize("NFKD", text)
     return ''.join(c for c in text if not unicodedata.combining(c))
 
+def truncate_markdown(text, max_length):
+    if len(text) <= max_length:
+        return text
+    return text[:max_length].rsplit(" ", 1)[0] + "..."
 
