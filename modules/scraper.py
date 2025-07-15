@@ -231,38 +231,48 @@ from modules.utils import ensure_affiliate_tag
 
 from modules.scraper import get_browser_type, get_browser_context
 
+from modules.browser import get_browser_type
+
 async def scrape_product_of_the_day():
     from bs4 import BeautifulSoup
     import random
-    import re
+    from playwright.async_api import async_playwright
 
     url = "https://www.amazon.in/s?i=stripbooks&rh=n%3A1318128031&s=popularity-rank&fs=true&ref=lp_1318128031_sar"
 
-    async with async_playwright() as p:
-        browser_type = get_browser_type(p)
-        browser, context = await get_browser_context(p)
-        page = await context.new_page()
-        await page.goto(url, timeout=120000, wait_until="domcontentloaded")
+    try:
+        async with async_playwright() as p:
+            browser_type = get_browser_type(p)
+            browser = await browser_type.launch(headless=True)
+            context = await browser.new_context(
+                java_script_enabled=True,
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/112.0.0.0 Safari/537.36"
+                )
+            )
+            page = await context.new_page()
 
-        try:
-            await page.wait_for_selector("div.s-main-slot", timeout=60000)
-        except Exception as e:
-            print(f"⚠️ Primary selector failed for Product of the Day: {e}")
+            await page.goto(url, timeout=90000, wait_until="networkidle")
+            await page.wait_for_timeout(6000)
+
             try:
+                await page.wait_for_selector("div.s-main-slot", timeout=60000)
+            except Exception:
                 await page.wait_for_selector("div.s-result-item", timeout=10000)
-            except Exception as e2:
-                print(f"⚠️ Fallback selector also failed for Product of the Day: {e2}")
-                await browser.close()
-                return None
 
-        html = await page.content()
-        await browser.close()
+            html = await page.content()
+            await browser.close()
+
+    except Exception as e:
+        print(f"⚠️ Error loading Product of the Day page:\n{e}")
+        return None
 
     soup = BeautifulSoup(html, "html.parser")
     cards = soup.select("div.s-main-slot div[data-asin]")
 
     books = []
-
     for card in cards:
         asin = card.get("data-asin", "")
         if not asin or len(asin) != 10:
@@ -270,16 +280,12 @@ async def scrape_product_of_the_day():
 
         title_tag = card.select_one("h2 span")
         title = title_tag.text.strip() if title_tag else "N/A"
-
         price_tag = card.select_one("span.a-price span.a-offscreen")
         price = price_tag.text.strip() if price_tag else "N/A"
-
         rating_tag = card.select_one("span.a-icon-alt")
         rating = rating_tag.text.strip() if rating_tag else "N/A"
-
         img_tag = card.select_one("img.s-image")
         image_url = img_tag['src'] if img_tag else ""
-
         product_url = f"https://www.amazon.in/dp/{asin}?tag=storesofriyas-21"
 
         books.append({
@@ -292,6 +298,7 @@ async def scrape_product_of_the_day():
         })
 
     return random.choice(books) if books else None
+
 
 
 
