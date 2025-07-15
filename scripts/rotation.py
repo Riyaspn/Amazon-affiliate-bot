@@ -170,7 +170,7 @@ async def send_budget_picks():
 
 # ⚡ Flash Deals
 async def send_flash_deals():
-    await send_message("⚡ [*Amazon Lightning Deals*](https://www.amazon.in/gp/goldbox?tag=storesofriyas-21)")
+    await send_message("⚡ [ *Amazon Lightning Deals* ](https://www.amazon.in/gp/goldbox?tag=storesofriyas-21)")
 
 
 # 🔍 Product of the Day
