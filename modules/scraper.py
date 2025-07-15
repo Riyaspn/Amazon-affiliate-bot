@@ -229,13 +229,17 @@ from playwright.async_api import async_playwright
 from modules.utils import ensure_affiliate_tag
 
 
+from modules.scraper import get_browser_type, get_browser_context
+
 async def scrape_product_of_the_day():
     from bs4 import BeautifulSoup
     import random
+    import re
 
     url = "https://www.amazon.in/s?i=stripbooks&rh=n%3A1318128031&s=popularity-rank&fs=true&ref=lp_1318128031_sar"
 
     async with async_playwright() as p:
+        browser_type = get_browser_type(p)
         browser, context = await get_browser_context(p)
         page = await context.new_page()
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
@@ -246,8 +250,8 @@ async def scrape_product_of_the_day():
             print(f"⚠️ Primary selector failed for Product of the Day: {e}")
             try:
                 await page.wait_for_selector("div.s-result-item", timeout=10000)
-            except Exception as fallback:
-                print(f"⚠️ Fallback selector also failed for Product of the Day: {fallback}")
+            except Exception as e2:
+                print(f"⚠️ Fallback selector also failed for Product of the Day: {e2}")
                 await browser.close()
                 return None
 
@@ -288,6 +292,7 @@ async def scrape_product_of_the_day():
         })
 
     return random.choice(books) if books else None
+
 
 
 
