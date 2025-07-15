@@ -46,3 +46,4 @@ jobs:
           else
             echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
             python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
+          fi  
