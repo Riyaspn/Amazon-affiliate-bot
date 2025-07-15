@@ -12,7 +12,7 @@ async def get_browser_context(playwright):
 import os
 
 def get_browser_type(playwright):
-    return playwright.chromium if os.getenv("GITHUB_ACTIONS") else playwright.firefox
+    return playwright.chromium
 
 import re
 from playwright.async_api import async_playwright
@@ -28,10 +28,11 @@ async def scrape_bestsellers(category_name, url, max_products=40):
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
-        page = await browser.new_page(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 800}
-        )
+        context = await browser.new_context(
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        viewport={"width": 1280, "height": 800},
+        java_script_enabled=True)
+        page = await context.new_page()
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
