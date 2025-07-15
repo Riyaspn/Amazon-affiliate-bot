@@ -299,16 +299,32 @@ async def scrape_budget_products(category_urls=None, price_threshold=999, limit=
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, unquote
 from modules.utils import shorten_url, add_label, ensure_affiliate_tag
+import time
 
 async def scrape_single_combo_product(url, page, max_products=3):
-    await page.goto(url, timeout=60000)
-    await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=15000)
+    try:
+        await page.goto(url, timeout=60000)
+        await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=15000)
+    except Exception as e:
+        print(f"❌ Combo deal error (attempt 1): {e}")
+        timestamp = str(int(time.time()))
+        await page.screenshot(path=f"combo_error_{timestamp}.png")
+        # Try fallback selector
+        try:
+            await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=8000)
+        except Exception as inner_e:
+            print(f"❌ Combo deal fallback error: {inner_e}")
+            await page.screenshot(path=f"combo_error_fallback_{timestamp}.png")
+            return "Combo Deal", []
+
     html = await page.content()
     soup = BeautifulSoup(html, "html.parser")
 
     containers = soup.select("div[data-cy='asin-faceout-container']")
-    products = []
+    if not containers:
+        containers = soup.select("div.s-main-slot div[data-asin]")
 
+    products = []
     for container in containers:
         if len(products) >= max_products:
             break
@@ -354,5 +370,6 @@ async def scrape_single_combo_product(url, page, max_products=3):
     label = unquote(raw_label).replace('+', ' ').title()
 
     return label, products
+
 
 
