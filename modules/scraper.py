@@ -1,4 +1,14 @@
 # modules/scraper.py
+async def get_browser_context(playwright):
+    browser_type = get_browser_type(playwright)
+    browser = await browser_type.launch(headless=True)
+    context = await browser.new_context(
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        viewport={"width": 1280, "height": 800},
+        java_script_enabled=True
+    )
+    return browser, context
+
 import os
 
 def get_browser_type(playwright):
@@ -17,8 +27,9 @@ async def scrape_bestsellers(category_name, url, max_products=40):
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", viewport={"width": 1280, "height": 800})
+        browser, context = await get_browser_context(p)
+        page = await context.new_page()
+        
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
         try:
@@ -83,8 +94,8 @@ async def scrape_prebuilt_category(url, max_products=10):
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", viewport={"width": 1280, "height": 800})
+        browser, context = await get_browser_context(p)
+        page = await context.new_page()
 
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
 
@@ -224,8 +235,9 @@ async def scrape_product_of_the_day():
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36", viewport={"width": 1280, "height": 800})
+        browser, context = await get_browser_context(p)
+        page = await context.new_page()
+
         await page.goto(url, timeout=120000, wait_until="domcontentloaded")
         await page.wait_for_selector("div.s-main-slot", timeout=60000)
         html = await page.content()
