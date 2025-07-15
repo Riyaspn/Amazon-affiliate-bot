@@ -2,8 +2,8 @@ name: Run Amazon Affiliate Bot
 
 on:
   schedule:
-    - cron: '30 3 * * *'     # Daily 9:00 AM IST
-    - cron: '30 15 * * *'    # Daily 9:00 PM IST
+    - cron: '30 3 * * *'     # 9:00 AM IST
+    - cron: '30 15 * * *'    # 9:00 PM IST
   workflow_dispatch:
     inputs:
       day:
@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
@@ -36,7 +36,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install firefox
+          python -m playwright install chromium
 
       - name: Run main.py with optional args
         run: |
@@ -46,11 +46,3 @@ jobs:
           else
             echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
             python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
-          fi
-
-      - name: Upload combo debug screenshot on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: combo_debug_screenshot
-          path: combo_debug.png
