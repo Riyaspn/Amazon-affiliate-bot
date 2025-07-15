@@ -1,49 +1,42 @@
-name: Run Amazon Affiliate Bot
+name: Amazon Affiliate Bot
 
 on:
   schedule:
-    - cron: '30 3 * * *'     # 9:00 AM IST
-    - cron: '30 15 * * *'    # 9:00 PM IST
+    - cron: '30 3,15 * * *'  # Runs daily at 9:00 AM and 9:00 PM IST (3:30 UTC & 15:30 UTC)
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day of the week (e.g. Monday)'
+        description: 'Day of the week (e.g., Monday)'
         required: false
         default: ''
       time_of_day:
-        description: 'Time of day: morning or evening'
+        description: 'Time of day (morning/evening)'
         required: false
         default: ''
 
 jobs:
-  run:
+  run-bot:
     runs-on: ubuntu-latest
 
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          npx playwright install --with-deps
+          python -m playwright install --with-deps
 
-      - name: ▶️ Run main.py
+      - name: Run main.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_ACTIONS: true
         run: |
-          if [ -z "${{ github.event.inputs.day }}" ]; then
-            echo "🟢 No manual inputs — running with system time"
-            python main.py
-          else
-            echo "🟡 Manual input provided — running for ${{ github.event.inputs.day }} ${{ github.event.inputs.time_of_day }}"
-            python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
-          fi
+          python main.py "${{ github.event.inputs.day }}" "${{ github.event.inputs.time_of_day }}"
