@@ -195,9 +195,10 @@ async def send_product_of_day():
 #Combo deals
 from modules.scraper import scrape_single_combo_product
 from modules.prebuilt import get_random_combo_category
-from modules.telegram import send_html, send_photo
 from modules.utils import truncate_markdown
+from telegram import send_html, send_photo
 from playwright.async_api import async_playwright
+
 
 async def send_combo_deal(max_products=1):
     try:
@@ -205,20 +206,28 @@ async def send_combo_deal(max_products=1):
         print(f"🌐 Visiting: {category_url}")
 
         async with async_playwright() as p:
-            browser = await p.firefox.launch(headless=True)
+            browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800}
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800},
+                java_script_enabled=True
             )
             page = await context.new_page()
 
             try:
                 label, all_products = await scrape_single_combo_product(category_url, page)
-            except Exception as e:
-                await page.screenshot(path="combo_debug.png")
-                raise e
-            finally:
-                await browser.close()
+            except Exception as fallback:
+                print(f"❌ Combo deal error (attempt 1): {fallback}")
+                try:
+                    await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=8000)
+                    label, all_products = await scrape_single_combo_product(category_url, page)
+                except Exception as fallback2:
+                    print(f"❌ Combo deal fallback error: {fallback2}")
+                    await send_html("⚠️ No combo deal found.")
+                    await browser.close()
+                    return
+
+            await browser.close()
 
         if not all_products:
             await send_html("⚠️ No combo deal found.")
@@ -244,6 +253,7 @@ async def send_combo_deal(max_products=1):
     except Exception as e:
         print(f"❌ Combo deal error: {e}")
         await send_html("⚠️ Error while fetching Combo Deal.")
+
 
 
 
