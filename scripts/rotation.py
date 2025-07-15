@@ -196,7 +196,7 @@ async def send_product_of_day():
 from modules.scraper import scrape_single_combo_product
 from modules.prebuilt import get_random_combo_category
 from modules.utils import truncate_markdown
-from telegram import send_html, send_photo
+from modules.telegram import send_html, send_photo
 from playwright.async_api import async_playwright
 
 
