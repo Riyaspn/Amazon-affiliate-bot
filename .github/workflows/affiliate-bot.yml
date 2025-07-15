@@ -2,7 +2,7 @@ name: Amazon Affiliate Bot
 
 on:
   schedule:
-    - cron: '30 3,15 * * *'  # Runs daily at 9:00 AM and 9:00 PM IST (3:30 UTC & 15:30 UTC)
+    - cron: '30 3,15 * * *'
   workflow_dispatch:
     inputs:
       day:
@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install --with-deps
+          python -m playwright install chromium  # ⚡️ Fast, Chromium-only
 
       - name: Run main.py
         env:
