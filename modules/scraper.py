@@ -1,4 +1,8 @@
 # modules/scraper.py
+import os
+
+def get_browser_type(playwright):
+    return playwright.chromium if os.getenv("GITHUB_ACTIONS") else playwright.firefox
 
 import re
 from playwright.async_api import async_playwright
