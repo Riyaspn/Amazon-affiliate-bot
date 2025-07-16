@@ -227,7 +227,7 @@ import random
 import re
 from playwright.async_api import async_playwright
 from modules.utils import ensure_affiliate_tag
-from modules.scraper import get_browser_context, scrape_single_combo_product
+
 
 async def scrape_product_of_the_day():
     from playwright.async_api import async_playwright
