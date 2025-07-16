@@ -341,18 +341,26 @@ from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
 async def scrape_single_combo_product(url, page, max_products=3):
     await page.goto(url, timeout=120000, wait_until="domcontentloaded")
+
+    html = None
+    soup = None
+
     try:
-        # Primary selector used by combo pages
         await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
-    except:
+        html = await page.content()
+        soup = BeautifulSoup(html, "html.parser")
+        containers = soup.select("div[data-cy='asin-faceout-container']")
+    except Exception:
         print("⚠️ Primary combo selector not found — trying fallback...")
-        # Let the calling function handle retry/fallback
-        raise
+        try:
+            await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=8000)
+            html = await page.content()
+            soup = BeautifulSoup(html, "html.parser")
+            containers = soup.select("div.s-main-slot div[data-asin]")
+        except Exception as fallback_error:
+            print(f"❌ Combo deal fallback error: {fallback_error}")
+            return "Combo Deal", []
 
-    html = await page.content()
-    soup = BeautifulSoup(html, "html.parser")
-
-    containers = soup.select("div[data-cy='asin-faceout-container']")
     products = []
 
     for container in containers:
@@ -395,12 +403,14 @@ async def scrape_single_combo_product(url, page, max_products=3):
             continue
 
     # Use 'k' param from URL for label
+    from urllib.parse import urlparse, parse_qs, unquote
     parsed = urlparse(url)
     query = parse_qs(parsed.query)
     raw_label = query.get('k', ['Combo Deal'])[0]
     label = unquote(raw_label).replace('+', ' ').title()
 
     return label, products
+
 
 
 
