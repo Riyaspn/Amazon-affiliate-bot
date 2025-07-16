@@ -231,7 +231,6 @@ from modules.utils import ensure_affiliate_tag
 
 from modules.scraper import get_browser_type, get_browser_context
 
-from modules.browser import get_browser_type
 
 async def scrape_product_of_the_day():
     from bs4 import BeautifulSoup
