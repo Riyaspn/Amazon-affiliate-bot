@@ -227,76 +227,41 @@ import random
 import re
 from playwright.async_api import async_playwright
 from modules.utils import ensure_affiliate_tag
-
-
-from modules.scraper import get_browser_type, get_browser_context
-
+from modules.scraper import get_browser_context, scrape_single_combo_product
 
 async def scrape_product_of_the_day():
-    from bs4 import BeautifulSoup
-    import random
     from playwright.async_api import async_playwright
+    from random import choice
 
-    url = "https://www.amazon.in/s?i=stripbooks&rh=n%3A1318128031&s=popularity-rank&fs=true&ref=lp_1318128031_sar"
+    # 🔄 Rotating book-related search URLs
+    urls = [
+        "https://www.amazon.in/s?k=motivational+books",
+        "https://www.amazon.in/s?k=best+fiction+books",
+        "https://www.amazon.in/s?k=non-fiction+books",
+        "https://www.amazon.in/s?k=bestseller+books&rh=n%3A1318128031&ref=nb_sb_noss",
+        "https://www.amazon.in/s?k=indian+authors+books",
+        "https://www.amazon.in/s?k=self+help+books",
+    ]
+    url = choice(urls)
 
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
-            browser = await browser_type.launch(headless=True)
-            context = await browser.new_context(
-                java_script_enabled=True,
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/112.0.0.0 Safari/537.36"
-                )
-            )
+            browser, context = await get_browser_context(p)
             page = await context.new_page()
 
-            await page.goto(url, timeout=90000, wait_until="networkidle")
-            await page.wait_for_timeout(6000)
-
             try:
-                await page.wait_for_selector("div.s-main-slot", timeout=60000)
-            except Exception:
-                await page.wait_for_selector("div.s-result-item", timeout=10000)
-
-            html = await page.content()
-            await browser.close()
+                label, products = await scrape_single_combo_product(url, page, max_products=5)
+                await browser.close()
+                return choice(products) if products else None
+            except Exception as e:
+                print(f"⚠️ Product of the Day scraping failed: {e}")
+                await browser.close()
+                return None
 
     except Exception as e:
-        print(f"⚠️ Error loading Product of the Day page:\n{e}")
+        print(f"❌ Unexpected error in Product of the Day:\n{e}")
         return None
 
-    soup = BeautifulSoup(html, "html.parser")
-    cards = soup.select("div.s-main-slot div[data-asin]")
-
-    books = []
-    for card in cards:
-        asin = card.get("data-asin", "")
-        if not asin or len(asin) != 10:
-            continue
-
-        title_tag = card.select_one("h2 span")
-        title = title_tag.text.strip() if title_tag else "N/A"
-        price_tag = card.select_one("span.a-price span.a-offscreen")
-        price = price_tag.text.strip() if price_tag else "N/A"
-        rating_tag = card.select_one("span.a-icon-alt")
-        rating = rating_tag.text.strip() if rating_tag else "N/A"
-        img_tag = card.select_one("img.s-image")
-        image_url = img_tag['src'] if img_tag else ""
-        product_url = f"https://www.amazon.in/dp/{asin}?tag=storesofriyas-21"
-
-        books.append({
-            "title": title,
-            "price": price,
-            "rating": rating,
-            "url": product_url,
-            "image": image_url,
-            "label": "📚 Bestseller Pick"
-        })
-
-    return random.choice(books) if books else None
 
 
 
