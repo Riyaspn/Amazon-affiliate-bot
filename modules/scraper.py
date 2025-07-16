@@ -339,77 +339,82 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, unquote
 from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
+from bs4 import BeautifulSoup
+import asyncio
+
 async def scrape_single_combo_product(url, page, max_products=3):
-    await page.goto(url, timeout=120000, wait_until="domcontentloaded")
-
-    html = None
-    soup = None
-
-    try:
-        await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
-        html = await page.content()
-        soup = BeautifulSoup(html, "html.parser")
-        containers = soup.select("div[data-cy='asin-faceout-container']")
-    except Exception:
-        print("⚠️ Primary combo selector not found — trying fallback...")
+    for attempt in range(2):  # Attempt twice: original + 1 retry
         try:
-            await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=8000)
+            await page.goto(url, timeout=120000, wait_until="domcontentloaded")
+            try:
+                await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
+            except:
+                print("⚠️ Primary combo selector not found — trying fallback...")
+                await page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
+                await page.wait_for_timeout(3000)
+                await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=20000)
+
             html = await page.content()
             soup = BeautifulSoup(html, "html.parser")
-            containers = soup.select("div.s-main-slot div[data-asin]")
-        except Exception as fallback_error:
-            print(f"❌ Combo deal fallback error: {fallback_error}")
-            return "Combo Deal", []
 
-    products = []
+            containers = soup.select("div[data-cy='asin-faceout-container']") or \
+                         soup.select("div.s-main-slot div[data-asin]")
+            products = []
 
-    for container in containers:
-        if len(products) >= max_products:
-            break
+            for container in containers:
+                if len(products) >= max_products:
+                    break
 
-        try:
-            title_elem = container.select_one("h2 span")
-            price_elem = container.select_one("span.a-price > span.a-offscreen")
-            rating_elem = container.select_one("span.a-icon-alt")
-            image_elem = container.select_one("img")
-            link_elem = container.select_one("a.a-link-normal")
+                try:
+                    title_elem = container.select_one("h2 span")
+                    price_elem = container.select_one("span.a-price > span.a-offscreen")
+                    rating_elem = container.select_one("span.a-icon-alt")
+                    image_elem = container.select_one("img")
+                    link_elem = container.select_one("a.a-link-normal")
 
-            if not all([title_elem, price_elem, image_elem, link_elem]):
-                continue
+                    if not all([title_elem, price_elem, image_elem, link_elem]):
+                        continue
 
-            title = title_elem.get_text(strip=True)
-            price = price_elem.get_text(strip=True)
-            rating = rating_elem.get_text(strip=True) if rating_elem else "N/A"
-            image = image_elem["src"]
-            url_suffix = link_elem["href"]
+                    title = title_elem.get_text(strip=True)
+                    price = price_elem.get_text(strip=True)
+                    rating = rating_elem.get_text(strip=True) if rating_elem else "N/A"
+                    image = image_elem["src"]
+                    url_suffix = link_elem["href"]
 
-            if "/sspa/" in url_suffix:
-                continue  # Skip sponsored products
+                    if "/sspa/" in url_suffix:
+                        continue  # Skip sponsored products
 
-            full_url = f"https://www.amazon.in{url_suffix}"
-            affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
+                    full_url = f"https://www.amazon.in{url_suffix}"
+                    affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
 
-            products.append({
-                "title": title,
-                "price": price,
-                "rating": rating,
-                "image": image,
-                "url": affiliate_url,
-                "label": add_label({"price": price, "rating": rating}),
-            })
+                    products.append({
+                        "title": title,
+                        "price": price,
+                        "rating": rating,
+                        "image": image,
+                        "url": affiliate_url,
+                        "label": add_label({"price": price, "rating": rating}),
+                    })
+                except Exception as e:
+                    print(f"⚠️ Error parsing product: {e}")
+                    continue
+
+            parsed = urlparse(url)
+            query = parse_qs(parsed.query)
+            raw_label = query.get('k', ['Combo Deal'])[0]
+            label = unquote(raw_label).replace('+', ' ').title()
+
+            if products:
+                return label, products
+            else:
+                raise Exception("No products found")
 
         except Exception as e:
-            print(f"⚠️ Error parsing product: {e}")
-            continue
+            print(f"❌ Combo deal {'retry' if attempt == 1 else 'error'} (attempt {attempt + 1}): {e}")
+            if attempt == 1:
+                return "🎯 Combo Deal", []
+            await asyncio.sleep(2)  # Short pause before retry
 
-    # Use 'k' param from URL for label
-    from urllib.parse import urlparse, parse_qs, unquote
-    parsed = urlparse(url)
-    query = parse_qs(parsed.query)
-    raw_label = query.get('k', ['Combo Deal'])[0]
-    label = unquote(raw_label).replace('+', ' ').title()
-
-    return label, products
 
 
 
