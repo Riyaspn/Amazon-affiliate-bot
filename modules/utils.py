@@ -103,7 +103,6 @@ from playwright.async_api import async_playwright
 
 from modules.scraper import get_browser_type, get_browser_context
 
-from modules.browser import get_browser_type
 
 async def get_soup_from_url(url: str):
     try:
