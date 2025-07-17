@@ -42,37 +42,53 @@ from modules.templates import format_top_5_product_message  # ✅ Ensure this is
 
 from random import sample
 
-import random
+
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.scraper import scrape_category_products
 from modules.telegram import send_html
 from modules.templates import format_top5_html
 
 async def send_top5_per_category(fixed=False):
-    # Step 1: Decide category pool
+    from modules.utils import deduplicate_variants
+    from modules.templates import format_top5_html
+    from modules.telegram import send_html
+    from modules.scraper import scrape_category_products
+    from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
+    import random
+
     if fixed:
         selected_categories = list(FIXED_CATEGORIES.items())[:3]
     else:
-        selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 3)
+        selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)  # allow fallback
 
-    # Step 2: Send header message
     await send_html("🛒 <b>Top 5 Per Category</b>")
 
-    # Step 3: Loop through categories and send products
+    count = 0
     for category_name, category_url in selected_categories:
+        if count >= 3:
+            break  # Limit to 3 successful sends
+
         print(f"🔍 Scraping Bestsellers: {category_name}")
         products = await scrape_category_products(category_name, category_url, max_results=15)
 
-
         if not products:
-            await send_html(f"⚠️ No products found for <b>{category_name}</b>.")
+            print(f"⚠️ No products found for {category_name}")
             continue
 
-        deduped_products = deduplicate_variants(products)
-        products = deduplicate_variants(products)
-        top5 = deduped_products[:5]
+        deduped = deduplicate_variants(products)
+        top5 = deduped[:5]
+
+        if not top5:
+            print(f"⚠️ No deduplicated products in {category_name}")
+            continue
+
         message = format_top5_html(category_name, top5)
         await send_html(message)
+        count += 1
+
+    if count == 0:
+        await send_html("⚠️ No top products found for any category.")
+
 
 
 
@@ -202,59 +218,56 @@ from playwright.async_api import async_playwright
 
 async def send_combo_deal(max_products=1):
     try:
-        category_name, category_url = get_random_combo_category()
-        print(f"🌐 Visiting: {category_url}")
-
         from modules.scraper import get_browser_type
-        async with async_playwright() as p:
-            browser_type = get_browser_type(p)
-            browser = await browser_type.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800},
-                java_script_enabled=True
-            )
-            page = await context.new_page()
+        from modules.prebuilt import get_random_combo_category
 
-            try:
-                label, all_products = await scrape_single_combo_product(category_url, page)
-            except Exception as fallback:
-                print(f"❌ Combo deal error (attempt 1): {fallback}")
+        for attempt in range(3):  # Retry logic
+            category_name, category_url = get_random_combo_category()
+            print(f"🌐 Attempt {attempt + 1}: Visiting {category_url}")
+
+            async with async_playwright() as p:
+                browser_type = get_browser_type(p)
+                browser = await browser_type.launch(headless=True)
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    viewport={"width": 1280, "height": 800},
+                    java_script_enabled=True
+                )
+                page = await context.new_page()
+
                 try:
-                    await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=8000)
                     label, all_products = await scrape_single_combo_product(category_url, page)
-                except Exception as fallback2:
-                    print(f"❌ Combo deal fallback error: {fallback2}")
-                    await send_html("⚠️ No combo deal found.")
-                    await browser.close()
-                    return
+                except Exception as e:
+                    print(f"❌ Error scraping combo: {e}")
+                    all_products = []
 
-            await browser.close()
+                await browser.close()
 
-        if not all_products:
-            await send_html("⚠️ No combo deal found.")
-            return
+            if all_products:
+                product = all_products[0]
+                title = truncate_markdown(product["title"], 80).replace('*', '')
+                price = product["price"]
+                rating = product["rating"]
+                url = product["url"]
+                image = product["image"]
 
-        product = all_products[0]
-        title = truncate_markdown(product["title"], 80).replace('*', '')
-        price = product["price"]
-        rating = product["rating"]
-        url = product["url"]
-        image = product["image"]
+                caption = (
+                    f"🎯 *Combo Deal – {label}*\n\n"
+                    f"⭐ *{title}*\n"
+                    f"💰 {price}   ⭐ {rating}\n"
+                    f"🔗 [View Deal]({url})\n\n"
+                    f"_🔎 Explore more combo deals:_ [Browse Category]({category_url})"
+                )
 
-        caption = (
-            f"🎯 *Combo Deal – {label}*\n\n"
-            f"⭐ *{title}*\n"
-            f"💰 {price}   ⭐ {rating}\n"
-            f"🔗 [View Deal]({url})\n\n"
-            f"_🔎 Explore more combo deals:_ [Browse Category]({category_url})"
-        )
+                await send_photo(image, caption)
+                return  # Exit after success
 
-        await send_photo(image, caption)
+        await send_html("⚠️ No combo deal found after multiple attempts.")
 
     except Exception as e:
-        print(f"❌ Combo deal error: {e}")
+        print(f"❌ Fatal Combo deal error: {e}")
         await send_html("⚠️ Error while fetching Combo Deal.")
+
 
 
 
