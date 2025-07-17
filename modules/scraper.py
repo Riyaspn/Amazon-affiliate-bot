@@ -50,7 +50,7 @@ async def scrape_category_products(category_name, url, limit=15):
     print(f"🔍 Scraping Bestsellers: {category_name}")
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+            browser = await p.chromium.launch(headless=True)
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
@@ -82,7 +82,7 @@ async def scrape_budget_picks(url, max_results=10):
     print("🔍 Scraping Budget Picks")
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+            browser = await p.chromium.launch(headless=True)
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
@@ -113,7 +113,7 @@ async def scrape_product_of_the_day(url):
     print("🔍 Scraping Product of the Day")
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+            browser = await p.chromium.launch(headless=True)
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
@@ -144,7 +144,7 @@ async def scrape_single_combo_product(label, url):
     print(f"🌐 Scraping Combo Deal: {label}")
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+            browser = await p.chromium.launch(headless=True)
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
