@@ -188,3 +188,39 @@ def format_top5_html(category_name: str, products: list) -> str:
         body += format_top_5_product_message(product, i) + "\n\n"
 
     return (header + body).strip()
+
+def format_markdown_caption(product: dict) -> str:
+    title = product["title"].replace('[', '\\[').replace(']', '\\]').replace('_', '\\_').replace('*', '\\*')
+    price = product.get("price", "N/A")
+    original_price = product.get("original_price", "")
+    rating = product.get("rating", "")
+    reviews = product.get("reviews", "")
+    label = product.get("label", "")
+    url = product["url"]
+
+    caption = f"{label} *{title}*\n"
+    caption += f"💰 Price: ₹{price}"
+    if original_price and original_price != price:
+        caption += f" (~~₹{original_price}~~)"
+    caption += f"\n⭐ Rating: {rating} ({reviews} reviews)\n"
+    caption += f"[🔗 View on Amazon]({url})"
+
+    return caption
+
+
+def format_html_message(product: dict) -> str:
+    title = product.get("title", "No Title")
+    url = product.get("url", "#")
+    price = product.get("price", "")
+    original_price = product.get("original_price", "")
+    rating = product.get("rating", "")
+    reviews = product.get("reviews", "")
+    label = product.get("label", "")
+
+    message = f"<b>{label}</b> <a href='{url}'>{title}</a>\n"
+    if original_price and original_price != price:
+        message += f"💰 <b>₹{price}</b> <s>₹{original_price}</s>\n"
+    else:
+        message += f"💰 <b>₹{price}</b>\n"
+    message += f"⭐ <b>{rating}</b> ({reviews} reviews)"
+    return message
