@@ -6,7 +6,7 @@ from playwright.async_api import async_playwright
 from modules.utils import (
     apply_affiliate_tag,
     shorten_url,
-    clean_title,
+    simplify_title,
     format_price,
     get_browser_context,
 )
@@ -17,7 +17,7 @@ async def async_extract_product_data(card):
     try:
         title_elem = await card.query_selector("h2 a span")
         title = await title_elem.inner_text() if title_elem else None
-        title = clean_title(title) if title else "No Title"
+        title = simplify_title(title) if title else "No Title"
 
         link_elem = await card.query_selector("h2 a")
         link = await link_elem.get_attribute("href") if link_elem else None
