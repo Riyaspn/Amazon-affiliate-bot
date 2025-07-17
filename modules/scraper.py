@@ -316,7 +316,7 @@ from modules.utils import (
 )
 from modules.prebuilt import COMBO_DEAL_CATEGORIES
 
-async def scrape_single_combo_product():
+async def scrape_single_combo_product(label: str, url: str):
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
