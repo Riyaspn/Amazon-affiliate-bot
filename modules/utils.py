@@ -98,17 +98,15 @@ def convert_price_to_float(price_str):
     price_str = price_str.replace("₹", "").replace(",", "").strip()
     return float(price_str)
 
+
+
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
-
-from modules.scraper import get_browser_type, get_browser_context
-
 
 async def get_soup_from_url(url: str):
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)  # dynamically choose chromium on GitHub Actions
-            browser = await browser_type.launch(headless=True)
+            browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
