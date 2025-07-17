@@ -307,78 +307,85 @@ from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 from bs4 import BeautifulSoup
 import asyncio
 
-async def scrape_single_combo_product(url, page, max_products=3):
-    for attempt in range(2):  # Attempt twice: original + 1 retry
-        try:
-            await page.goto(url, timeout=120000, wait_until="domcontentloaded")
+import random
+from playwright.async_api import async_playwright
+from modules.utils import (
+    ensure_affiliate_tag,
+    shorten_url,
+    get_browser_type,
+)
+from modules.prebuilt import COMBO_DEAL_CATEGORIES
+
+async def scrape_single_combo_product():
+    async with async_playwright() as p:
+        browser_type = get_browser_type(p)
+        browser = await browser_type.launch(headless=True)
+        context = await browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            java_script_enabled=True,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+
+        label, url = random.choice(list(COMBO_DEAL_CATEGORIES.items()))
+        max_attempts = 3
+
+        for attempt in range(max_attempts):
             try:
-                await page.wait_for_selector("div[data-cy='asin-faceout-container']", timeout=30000)
-            except:
-                print("⚠️ Primary combo selector not found — trying fallback...")
-                await page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
-                await page.wait_for_timeout(3000)
-                await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=20000)
-
-            html = await page.content()
-            soup = BeautifulSoup(html, "html.parser")
-
-            containers = soup.select("div[data-cy='asin-faceout-container']") or \
-                         soup.select("div.s-main-slot div[data-asin]")
-            products = []
-
-            for container in containers:
-                if len(products) >= max_products:
-                    break
+                print(f"🌐 Attempt {attempt+1}: Visiting {url}")
+                await page.goto(url, timeout=60000)
+                await page.wait_for_load_state("networkidle")  # ✅ ensures full page load
 
                 try:
-                    title_elem = container.select_one("h2 span")
-                    price_elem = container.select_one("span.a-price > span.a-offscreen")
-                    rating_elem = container.select_one("span.a-icon-alt")
-                    image_elem = container.select_one("img")
-                    link_elem = container.select_one("a.a-link-normal")
+                    await page.wait_for_selector("div.s-main-slot div[data-asin]", timeout=40000)
+                except:
+                    print("⚠️ Primary combo selector not found — trying fallback...")
 
-                    if not all([title_elem, price_elem, image_elem, link_elem]):
-                        continue
+                product_cards = await page.query_selector_all("div.s-main-slot div[data-asin]")
 
-                    title = title_elem.get_text(strip=True)
-                    price = price_elem.get_text(strip=True)
-                    rating = rating_elem.get_text(strip=True) if rating_elem else "N/A"
-                    image = image_elem["src"]
-                    url_suffix = link_elem["href"]
+                products = []
+                for card in product_cards:
+                    if len(products) >= 5:
+                        break
+                    try:
+                        title = await card.query_selector("h2 a span")
+                        title_text = await title.inner_text() if title else None
 
-                    if "/sspa/" in url_suffix:
-                        continue  # Skip sponsored products
+                        link = await card.query_selector("h2 a")
+                        href = await link.get_attribute("href") if link else None
+                        if href and not href.startswith("http"):
+                            href = "https://www.amazon.in" + href
 
-                    full_url = f"https://www.amazon.in{url_suffix}"
-                    affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
+                        price_whole = await card.query_selector("span.a-price-whole")
+                        price_frac = await card.query_selector("span.a-price-fraction")
+                        price = (await price_whole.inner_text() if price_whole else "") + (await price_frac.inner_text() if price_frac else "")
 
-                    products.append({
-                        "title": title,
-                        "price": price,
-                        "rating": rating,
-                        "image": image,
-                        "url": affiliate_url,
-                        "label": add_label({"price": price, "rating": rating}),
-                    })
-                except Exception as e:
-                    print(f"⚠️ Error parsing product: {e}")
-                    continue
+                        if title_text and href and price:
+                            final_url = ensure_affiliate_tag(href)
+                            short_url = await shorten_url(final_url)
+                            products.append({
+                                "title": title_text.strip(),
+                                "price": f"₹{price.strip()}",
+                                "url": short_url
+                            })
+                    except Exception as inner_e:
+                        print(f"⚠️ Error parsing product card: {inner_e}")
 
-            parsed = urlparse(url)
-            query = parse_qs(parsed.query)
-            raw_label = query.get('k', ['Combo Deal'])[0]
-            label = unquote(raw_label).replace('+', ' ').title()
+                if products:
+                    await browser.close()
+                    return label, products
 
-            if products:
-                return label, products
-            else:
-                raise Exception("No products found")
+                # Retry only if no products were scraped
+                raise Exception("No products found on this attempt")
 
-        except Exception as e:
-            print(f"❌ Combo deal {'retry' if attempt == 1 else 'error'} (attempt {attempt + 1}): {e}")
-            if attempt == 1:
-                return "🎯 Combo Deal", []
-            await asyncio.sleep(2)  # Short pause before retry
+            except Exception as e:
+                print(f"❌ Combo deal error (attempt {attempt+1}): {e}")
+                screenshot_path = f"combo_error_{attempt+1}.png"
+                await page.screenshot(path=screenshot_path)
+                print(f"📸 Screenshot saved: {screenshot_path}")
+
+        await browser.close()
+        return label, []  # fallback if all attempts fail
 
 
 
