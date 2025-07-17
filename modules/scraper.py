@@ -7,8 +7,10 @@ from modules.utils import (
     apply_affiliate_tag,
     shorten_url,
     clean_title,
-    format_price
+    format_price,
+    get_browser_context,
 )
+
 
 # Shared product extraction function
 async def async_extract_product_data(card):
