@@ -186,3 +186,14 @@ def truncate_markdown(text, limit=80):
     text = text.strip()
     text = text[:limit].rsplit(' ', 1)[0]
     return text + "..." if len(text) >= limit else text
+
+
+async def get_browser_context(browser_type):
+    """Return a new browser context with proper settings"""
+    browser = await browser_type.launch(headless=True)
+    context = await browser.new_context(
+        viewport={"width": 1280, "height": 800},
+        java_script_enabled=True,
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    )
+    return browser, context
