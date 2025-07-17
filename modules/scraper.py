@@ -167,3 +167,42 @@ async def scrape_single_combo_product(label, url):
     except Exception as e:
         print(f"❌ Error scraping combo: {e}")
         return label, []
+
+import random
+from modules.prebuilt import BUDGET_PICK_CATEGORIES
+from modules.utils import apply_affiliate_tag, shorten_url
+from playwright.async_api import async_playwright
+from modules.scraper import get_browser_type, get_browser_context, async_extract_product_data
+
+
+async def scrape_budget_products():
+    selected = random.sample(list(BUDGET_PICK_CATEGORIES.items()), 5)
+    results = []
+
+    browser_type = get_browser_type()
+    async with async_playwright() as p:
+        browser = await browser_type.launch(headless=True)
+        context = await get_browser_context(browser)
+        page = await context.new_page()
+
+        for label, url in selected:
+            try:
+                await page.goto(url, timeout=60000)
+                await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
+
+                cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
+                for card in cards:
+                    product = await async_extract_product_data(card)
+                    if product and product.get("price", 0) < 999:
+                        product["url"] = await shorten_url(apply_affiliate_tag(product["url"]))
+                        results.append((label, product))
+                        break  # Only one product per category
+                if len(results) == 5:
+                    break  # Stop once 5 total products are collected
+
+            except Exception as e:
+                print(f"[Budget] Skipping {label} due to error: {e}")
+                continue
+
+        await browser.close()
+    return results
