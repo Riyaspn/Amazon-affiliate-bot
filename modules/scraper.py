@@ -26,25 +26,55 @@ async def async_extract_product_data(card):
         link = "https://www.amazon.in" + link
         link = await shorten_url(apply_affiliate_tag(link))
 
+        # Price (current deal price)
         price_whole = await card.query_selector("span.a-price-whole")
         price_frac = await card.query_selector("span.a-price-fraction")
         if price_whole and price_frac:
-            price = f"{await price_whole.inner_text()}.{await price_frac.inner_text()}"
+            price_str = f"{await price_whole.inner_text()}.{await price_frac.inner_text()}"
         else:
             price_elem = await card.query_selector("span.a-price")
-            price = await price_elem.inner_text() if price_elem else "Unavailable"
+            price_str = await price_elem.inner_text() if price_elem else "0"
 
+        # MRP / Original price (crossed out price)
+        mrp_elem = await card.query_selector("span.a-price.a-text-price span.a-offscreen")
+        mrp_str = await mrp_elem.inner_text() if mrp_elem else None
+
+        # Convert price strings to float for discount calculation
+        def price_to_float(p):
+            try:
+                return float(p.replace("₹", "").replace(",", "").strip())
+            except:
+                return 0
+
+        price = price_to_float(price_str)
+        mrp = price_to_float(mrp_str) if mrp_str else None
+
+        # Calculate discount percent if MRP available
+        discount_percent = None
+        if mrp and mrp > price:
+            discount_percent = round((mrp - price) / mrp * 100)
+
+        # Rating
         rating_elem = await card.query_selector("span.a-icon-alt")
         rating = await rating_elem.inner_text() if rating_elem else "No rating"
+
+        # Urgency check (presence of deal badge or countdown)
+        urgency_elem = await card.query_selector(".deal-badge, .s-badge-text, .countdown")
+        urgency = bool(urgency_elem)
 
         return {
             "title": title.strip(),
             "url": link,
-            "price": format_price(price),
-            "rating": rating
+            "price": format_price(price_str),
+            "mrp": format_price(mrp_str) if mrp_str else None,
+            "discount_percent": discount_percent,
+            "rating": rating,
+            "urgency": urgency,
         }
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ Error extracting product data: {e}")
         return None
+
 
 
 async def scrape_category_products(category_name, url, limit=15):
