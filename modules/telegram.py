@@ -1,6 +1,8 @@
 import os
 import aiohttp
 from dotenv import load_dotenv
+from modules.templates import format_html_message, format_markdown_caption
+
 
 load_dotenv()
 
