@@ -10,7 +10,7 @@ from modules.utils import (
     format_price,
     get_browser_context,
 )
-
+from modules.prebuilt import BUDGET_PICK_CATEGORIES
 
 # Shared product extraction function
 async def async_extract_product_data(card):
