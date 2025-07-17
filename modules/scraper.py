@@ -172,7 +172,6 @@ import random
 from modules.prebuilt import BUDGET_PICK_CATEGORIES
 from modules.utils import apply_affiliate_tag, shorten_url
 from playwright.async_api import async_playwright
-from modules.scraper import get_browser_type, get_browser_context, async_extract_product_data
 
 
 async def scrape_budget_products():
