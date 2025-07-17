@@ -74,3 +74,14 @@ COMBO_DEAL_CATEGORIES = {
 def get_random_combo_category():
     category = random.choice(list(COMBO_DEAL_CATEGORIES.keys()))
     return category, COMBO_DEAL_CATEGORIES[category]
+
+
+# 💸 Budget Picks Categories (under ₹999)
+BUDGET_PICK_CATEGORIES = {
+    "🧴 Beauty Essentials": "https://www.amazon.in/s?k=beauty&rh=p_36%3A-99900",
+    "🧹 Kitchen Essentials": "https://www.amazon.in/s?k=kitchen&rh=p_36%3A-99900",
+    "🎧 Mobile Accessories": "https://www.amazon.in/s?k=mobile+accessories&rh=p_36%3A-99900",
+    "🧦 Fashion Under ₹999": "https://www.amazon.in/s?k=clothing&rh=p_36%3A-99900",
+    "🖊️ Stationery & Supplies": "https://www.amazon.in/s?k=stationery&rh=p_36%3A-99900",
+    "🧴 Health & Wellness": "https://www.amazon.in/s?k=health&rh=p_36%3A-99900",
+}
