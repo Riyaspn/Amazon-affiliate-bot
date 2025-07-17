@@ -7,8 +7,7 @@ from modules.utils import (
     apply_affiliate_tag,
     shorten_url,
     clean_title,
-    format_price,
-    get_browser_type
+    format_price
 )
 
 # Shared product extraction function
@@ -51,7 +50,6 @@ async def scrape_category_products(category_name, url, limit=15):
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36"
@@ -83,7 +81,6 @@ async def scrape_budget_picks(url, max_results=10):
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36"
@@ -114,7 +111,6 @@ async def scrape_product_of_the_day(url):
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36"
@@ -145,7 +141,6 @@ async def scrape_single_combo_product(label, url):
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
-            browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36"
