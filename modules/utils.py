@@ -184,8 +184,10 @@ def normalize_text(text):
 
 def truncate_markdown(text, limit=80):
     text = text.strip()
-    text = text[:limit].rsplit(' ', 1)[0]
-    return text + "..." if len(text) >= limit else text
+    if len(text) <= limit:
+        return escape_markdown(text)
+    truncated = text[:limit].rsplit(' ', 1)[0]
+    return escape_markdown(truncated + "...")
 
 
 async def get_browser_context(browser_type):
