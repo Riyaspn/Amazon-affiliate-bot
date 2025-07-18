@@ -27,7 +27,9 @@ def build_hidden_gem_message(category_name, products):
         discount = product.get('discount', '')
         rating = escape_markdown(product.get('rating', ''))
         url = product.get('url', '')
-        bank_offer = product.get('bank_offer', '') or product.get('offer', '')
+        bank_offer = product.get("bank_offer", "")
+        normal_offer = product.get("normal_offer", "")
+
 
         line = f"{label}\n🛒 *{title}*\n"
 
@@ -42,6 +44,8 @@ def build_hidden_gem_message(category_name, products):
             line += f"🔗 [View on Amazon]({escape_markdown(url)})\n"
         if bank_offer:
             line += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+        if normal_offer:
+            line += f"💥 *{escape_markdown(normal_offer.strip())}*\n"    
 
         message += line + "\n"
 
@@ -66,7 +70,8 @@ def build_budget_picks_message(products):
         price = product.get("price", "")
         original_price = product.get("original_price", "")
         discount = product.get("discount_percent", "")
-        offer = product.get("offer", "") or product.get("bank_offer", "")
+        bank_offer = product.get("bank_offer", "")
+        normal_offer = product.get("normal_offer", "")
 
         line = f"🔹 [{title}]({url})\n"
         if price:
@@ -75,8 +80,10 @@ def build_budget_picks_message(products):
             line += f" (⚡ {discount})"
         if original_price and original_price != price:
             line += f", MRP ₹{original_price}"
-        if offer:
-            line += f"\n   💳 *{offer.strip()}*"
+        if bank_offer:
+            line += f"\n   💳 *{bank_offer.strip()}*"
+        if normal_offer:
+            line += f"\n   💥 *{normal_offer.strip()}*"
 
         lines.append(line)
 
@@ -96,7 +103,9 @@ def build_flash_deals_message(deals):
         price = deal.get('price', '')
         original_price = deal.get('original_price', '')
         discount = deal.get('discount', '')
-        bank_offer = deal.get('bank_offer', '') or deal.get('offer', '')
+        bank_offer = deal.get("bank_offer", "")
+        normal_offer = deal.get("normal_offer", "")
+
 
         line = f"🔹 *{title}*\n"
 
@@ -107,6 +116,9 @@ def build_flash_deals_message(deals):
 
         if bank_offer:
             line += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+        if normal_offer:
+            line += f"💥 *{escape_markdown(normal_offer.strip())}*\n"
+
 
         if url:
             line += f"🔗 [View Deal]({escape_markdown(url)})\n"
@@ -152,20 +164,25 @@ def build_combo_message(label, products):
     discount_percent = product.get("discount_percent", "")
     image_url = product.get("image", "")
     product_url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
-    bank_offer = product.get("bank_offer", "") or product.get("offer", "")
+
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
 
     header = f"🎯 *{escape_markdown(label)} Combo Deal* 🎯"
     price_info = f"*Price:* ~~₹{original_price}~~ → *₹{discounted_price}* (`{discount_percent}`)"
 
-    offer_line = f"\n💳 *{escape_markdown(bank_offer.strip())}*" if bank_offer else ""
+    # Collect both offers if available
+    offer_lines = ""
+    if bank_offer:
+        offer_lines += f"\n💳 *{bank_offer.strip()}*"
+    if normal_offer:
+        offer_lines += f"\n💥 *{normal_offer.strip()}*"
 
     footer = f"[🛒 Grab Now]({product_url})"
 
-    caption = f"{header}\n\n*{title}*\n\n{price_info}{offer_line}\n\n{footer}"
+    caption = f"{header}\n\n*{title}*\n\n{price_info}{offer_lines}\n\n{footer}"
 
     return image_url, caption
-
-
 
 
 
@@ -191,7 +208,8 @@ def build_product_of_day_message(product):
     rating = escape_markdown(product.get("rating", "⭐ N/A"))
     image = product.get("image", None)
     url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
-    bank_offer = product.get("bank_offer", "") or product.get("offer", "")
+    bank_offer = product.get("bank_offer", "")
+    normal_offer = product.get("normal_offer", "")
 
     caption = f"🔍 *Product of the Day*\n\n"
     caption += f"*{title}*\n"
@@ -203,6 +221,8 @@ def build_product_of_day_message(product):
 
     if bank_offer:
         caption += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+    if normal_offer:
+        caption += f"💥 *{escape_markdown(normal_offer.strip())}*\n"    
 
     caption += f"⭐ {rating}\n[🔗 View on Amazon]({url})"
 
@@ -223,7 +243,8 @@ def format_product_message(product, label, show_affiliate=True):
     discount_percent = product.get("discount_percent", "")
     rating = escape_markdown(product.get("rating", ""))
     url = product.get("url", "")
-    offer = escape_markdown(product.get("bank_offer", "") or product.get("offer", ""))
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
 
     if show_affiliate:
         url = shorten_url(apply_affiliate_tag(url))
@@ -235,8 +256,10 @@ def format_product_message(product, label, show_affiliate=True):
     else:
         message += f"💰 *₹{price}*\n"
 
-    if offer:
-        message += f"💳 *{offer}*\n"
+    if bank_offer:
+        message += f"💳 *{bank_offer}*\n"
+    if normal_offer:
+        message += f"💥 *{normal_offer}*\n"
 
     message += f"⭐ {rating}\n🔗 [View on Amazon]({escape_markdown(url)})"
 
@@ -262,7 +285,8 @@ def build_product_message(product: dict) -> str:
     discount_percent = product.get("discount_percent", "")
     rating = escape_markdown(product.get("rating", "⭐ N/A"))
     url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
-    bank_offer = escape_markdown(product.get("bank_offer", "") or product.get("offer", ""))
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
     label = product.get("label", "")
 
     msg = f"🛍️ *{title}*\n"
@@ -272,7 +296,9 @@ def build_product_message(product: dict) -> str:
         msg += f"💰 *₹{price}*\n"
 
     if bank_offer:
-        msg += f"💳 *{bank_offer}*\n"
+        message += f"💳 *{bank_offer}*\n"
+    if normal_offer:
+        message += f"💥 *{normal_offer}*\n"
 
     msg += f"⭐ {rating}\n🔗 [View on Amazon]({url})"
 
