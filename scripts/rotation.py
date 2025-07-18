@@ -2,10 +2,9 @@ import random
 from datetime import datetime
 from modules.templates import format_top_5_product_message
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.scraper import scrape_category_products
 from modules.templates import build_product_message
 from modules.templates import build_category_header
-from modules.telegram import send as send_message, send_photo, CHAT_ID
+from modules.telegram import send_markdown, send_html, send_photo, send as send_message, CHAT_ID
 from modules.scraper import (
     scrape_category_products,
     scrape_product_of_the_day,
@@ -19,12 +18,7 @@ def get_day():
 
 
 # 🛒 Top 5 Per Category
-from modules.templates import build_product_message, build_category_header
-from modules.telegram import send as await send_markdown
 
-
-import random
-from datetime import datetime
 from modules.utils import deduplicate_variants
 
 
