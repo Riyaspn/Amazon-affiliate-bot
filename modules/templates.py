@@ -3,7 +3,7 @@
 def build_prebuilt_links_message(categories):
     message = "🔗 *Amazon Prebuilt Category Pages*\n\n"
     for cat in categories:
-        message += f"📢 *{cat['category']}*\n🔗 [View Deals]({cat['url']})\n\n"
+        message += f"📢 *{escape_markdown(cat['category'])}*\n🔗 [View Deals]({escape_markdown(cat['url'])})\n\n"
     return message.strip()
 
 
@@ -17,11 +17,15 @@ def build_hidden_gem_message(category_name, products):
     message = f"📢 💎 *HIDDEN GEM: {category_name.upper()} DEALS*\n\n"
     for i, product in enumerate(products):
         label = "🔥 Hot Deal" if i == 0 else "⭐ Top Pick"
+        title = escape_markdown(product['title'])
+        price = escape_markdown(product['price'])
+        rating = escape_markdown(product['rating'])
+        link = escape_markdown(product['link'])
         message += f"""{label}
-🛒 *{product['title']}*
-💰 {product['price']}
-⭐ {product['rating']}
-🔗 [View on Amazon]({product['link']})
+        🛒 *{title}*
+        💰 {price}
+        ⭐ {rating}
+        🔗 [View on Amazon]({link})
 
 """
     return message.strip()
@@ -54,7 +58,9 @@ def build_budget_picks_message(products):
 def build_flash_deals_message(deals):
     message = "⚡ *FLASH DEALS ALERT!*\n\n"
     for deal in deals:
-        message += f"{deal['title']}\n🔗 [View Deal]({deal['url']})\n\n"
+        title = escape_markdown(deal['title'])
+        url = escape_markdown(deal['url'])
+        message += f"{title}\n🔗 [View Deal]({url})\n\n"
     return message.strip()
 
 
@@ -63,7 +69,6 @@ def build_flash_deals_message(deals):
 
 
 
-import html
 import re
 
 def truncate(text, limit=100):
@@ -151,7 +156,8 @@ def format_product_message(product, label, show_affiliate=True):
     rating = product.get("rating", "")
     link = product.get("affiliate_link", product.get("url", ""))
 
-    message = f"""{label} *{title}*\n💰 Price: ₹{price}\n⭐ Rating: {rating}\n🔗 [View on Amazon]({link})"""
+    message = f"""{escape_markdown(label)} *{escape_markdown(title)}*\n💰 Price: ₹{escape_markdown(price)}\n⭐ Rating: {escape_markdown(rating)}\n🔗 [View on Amazon]({escape_markdown(link)})"""
+
     return message
 
 def build_category_header(category: str) -> str:
@@ -164,9 +170,9 @@ def build_evening_intro(label: str) -> str:
     return f"🌆 *Evening Deals:* {label} just dropped! Don't miss out:\n"
 
 def build_product_message(product: dict) -> str:
-    title = product.get("title", "No title")
+    title = escape_markdown(product.get("title", "No title"))
     price = product.get("price", "N/A")
-    rating = product.get("rating", "⭐ N/A")
+    rating = escape_markdown(product.get("rating", "⭐ N/A"))
     url = product.get("url", "")
     label = product.get("label", "")
 
@@ -210,14 +216,7 @@ def format_top_5_product_message_markdown(product, index):
     return message.strip()
 
 
-def format_top5_html(category_name: str, products: list) -> str:
-    header = f"<b>📢 {category_name.upper()} DEALS</b>\n\n"
-    body = ""
 
-    for i, product in enumerate(products[:5]):
-        body += format_top_5_product_message(product, i) + "\n\n"
-
-    return (header + body).strip()
 
 def format_markdown_caption(product: dict) -> str:
     from modules.utils import apply_affiliate_tag, shorten_url
@@ -242,19 +241,3 @@ def format_markdown_caption(product: dict) -> str:
 
 
 
-def format_html_message(product: dict) -> str:
-    title = product.get("title", "No Title")
-    url = product.get("url", "#")
-    price = product.get("price", "")
-    original_price = product.get("original_price", "")
-    rating = product.get("rating", "")
-    reviews = product.get("reviews", "")
-    label = product.get("label", "")
-
-    message = f"<b>{label}</b> <a href='{url}'>{title}</a>\n"
-    if original_price and original_price != price:
-        message += f"💰 <b>₹{price}</b> <s>₹{original_price}</s>\n"
-    else:
-        message += f"💰 <b>₹{price}</b>\n"
-    message += f"⭐ <b>{rating}</b> ({reviews} reviews)"
-    return message
