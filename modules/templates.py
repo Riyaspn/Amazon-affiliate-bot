@@ -1,10 +1,14 @@
 # modules/templates.py
 
+from modules.utils import apply_affiliate_tag, shorten_url
+
 def build_prebuilt_links_message(categories):
     message = "🔗 *Amazon Prebuilt Category Pages*\n\n"
     for cat in categories:
-        message += f"📢 *{escape_markdown(cat['category'])}*\n🔗 [View Deals]({escape_markdown(cat['url'])})\n\n"
+        url = shorten_url(apply_affiliate_tag(cat['url']))
+        message += f"📢 *{escape_markdown(cat['category'])}*\n🔗 [View Deals]({escape_markdown(url)})\n\n"
     return message.strip()
+
 
 
 
@@ -211,14 +215,34 @@ def build_product_of_day_message(product):
 
 
 def format_product_message(product, label, show_affiliate=True):
-    title = product.get("title", "")
+    from modules.utils import apply_affiliate_tag, shorten_url
+
+    title = escape_markdown(product.get("title", ""))
     price = product.get("price", "")
-    rating = product.get("rating", "")
-    link = product.get("affiliate_link", product.get("url", ""))
+    original_price = product.get("original_price", "")
+    discount_percent = product.get("discount_percent", "")
+    rating = escape_markdown(product.get("rating", ""))
+    url = product.get("url", "")
+    offer = escape_markdown(product.get("bank_offer", "") or product.get("offer", ""))
 
-    message = f"""{escape_markdown(label)} *{escape_markdown(title)}*\n💰 Price: ₹{escape_markdown(price)}\n⭐ Rating: {escape_markdown(rating)}\n🔗 [View on Amazon]({escape_markdown(link)})"""
+    if show_affiliate:
+        url = shorten_url(apply_affiliate_tag(url))
 
-    return message
+    message = f"{escape_markdown(label)} *{title}*\n"
+
+    if original_price and original_price != price:
+        message += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
+    else:
+        message += f"💰 *₹{price}*\n"
+
+    if offer:
+        message += f"💳 *{offer}*\n"
+
+    message += f"⭐ {rating}\n🔗 [View on Amazon]({escape_markdown(url)})"
+
+    return message.strip()
+
+
 
 def build_category_header(category: str) -> str:
     return f"\n📢 *{category.upper()} DEALS*\n"
@@ -230,24 +254,32 @@ def build_evening_intro(label: str) -> str:
     return f"🌆 *Evening Deals:* {label} just dropped! Don't miss out:\n"
 
 def build_product_message(product: dict) -> str:
+    from modules.utils import apply_affiliate_tag, shorten_url
+
     title = escape_markdown(product.get("title", "No title"))
     price = product.get("price", "N/A")
+    original_price = product.get("original_price", "")
+    discount_percent = product.get("discount_percent", "")
     rating = escape_markdown(product.get("rating", "⭐ N/A"))
-    url = product.get("url", "")
+    url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
+    bank_offer = escape_markdown(product.get("bank_offer", "") or product.get("offer", ""))
     label = product.get("label", "")
 
-    # Add warning emoji if URL is missing
-    if not url:
-        url_display = "❌ URL Missing"
+    msg = f"🛍️ *{title}*\n"
+    if original_price and original_price != price:
+        msg += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
     else:
-        url_display = f"🔗 [View on Amazon]({url})"
+        msg += f"💰 *₹{price}*\n"
 
-    return (
-        f"🛍️ *{title}*\n"
-        f"💰 {price}   ⭐ {rating}\n"
-        f"{url_display}\n"
-        f"{label}".strip()
-    )
+    if bank_offer:
+        msg += f"💳 *{bank_offer}*\n"
+
+    msg += f"⭐ {rating}\n🔗 [View on Amazon]({url})"
+
+    if label:
+        msg += f"\n_{escape_markdown(label)}_"
+
+    return msg.strip()
 
 
 
