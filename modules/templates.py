@@ -32,11 +32,19 @@ def build_hidden_gem_message(category_name, products):
 
 
 def build_budget_picks_message(products):
+    from modules.utils import apply_affiliate_tag, shorten_url
+
     header = "💸 *Top Budget Picks (Under ₹999)*\n"
     body = ""
     for p in products:
-        body += f"\n[{p['title']}]({p['link']})\n💰 ₹{p['price']}   ⭐ {p['rating']}\n"
-    return header + body
+        title = escape_markdown(p["title"])
+        price = p.get("price", "N/A")
+        rating = escape_markdown(p.get("rating", ""))
+        url = shorten_url(apply_affiliate_tag(p.get("url", "#")))
+
+        body += f"\n[{title}]({url})\n💰 ₹{price}   ⭐ {rating}\n"
+    return header + body.strip()
+
 
 
 
@@ -110,25 +118,28 @@ def build_combo_message(label, products):
 
 
 def build_product_of_day_message(product):
-    label = "🔍 *Product of the Day*"
-    title = product.get('title', 'No title').replace('*', '').replace('_', '')
-    price = product.get('price', 'N/A')
-    rating = product.get('rating', '⭐ N/A')
-    url = product.get('link') or product.get('url', '#')
-    image = product.get('image')
+    from modules.utils import apply_affiliate_tag, shorten_url
 
-    # Message for plain text delivery (without image)
-    text_message = f"""{label}
+    title = escape_markdown(product.get("title", "No title"))
+    original_price = product.get("original_price", "")
+    discounted_price = product.get("price", "N/A")
+    discount_percent = product.get("discount_percent", "")
+    rating = escape_markdown(product.get("rating", "⭐ N/A"))
+    image = product.get("image", None)
+    url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
 
-🛒 *{title}*
-💰 {price}
-⭐ {rating}
-🔗 [View on Amazon]({url})"""
+    caption = f"🔍 *Product of the Day*\n\n"
+    caption += f"*{title}*\n"
 
-    # Image caption using Markdown
-    image_caption = f"""🔍 *Product of the Day*\n*{title}*\n💰 {price}\n⭐ {rating}\n[🔗 View on Amazon]({url})"""
+    if original_price and original_price != discounted_price:
+        caption += f"💰 ~~₹{original_price}~~ → *₹{discounted_price}* `{discount_percent}`\n"
+    else:
+        caption += f"💰 *₹{discounted_price}*\n"
 
-    return text_message.strip(), image_caption.strip(), image
+    caption += f"⭐ {rating}\n[🔗 View on Amazon]({url})"
+
+    return caption.strip(), caption.strip(), image
+
 
 
 
@@ -175,23 +186,29 @@ def build_product_message(product: dict) -> str:
 
 
 
-def format_top_5_product_message(product, index):
+def format_top_5_product_message_markdown(product, index):
     label = "🔥 Hot Deal" if index == 0 else (
         "💸 Premium Pick" if index == 1 else "⭐ Top Rated"
     )
 
-    name = product.get("title") or product.get("name") or "No Name"
-    price = product.get("price", "Price Not Available")
-    rating = product.get("rating", "N/A")
+    title = escape_markdown(product.get("title", "No title"))
+    price = product.get("price", "N/A")
+    original_price = product.get("original_price", "")
+    discount_percent = product.get("discount_percent", "")
+    rating = escape_markdown(product.get("rating", ""))
     url = product.get("url", "#")
 
-    return (
-        f"<b>{label}</b>\n"
-        f"🛒 <b>{name}</b>\n"
-        f"💰 {price}\n"
-        f"⭐ {rating}\n"
-        f"🔗 <a href=\"{url}\">View on Amazon</a>"
-    )
+    message = f"*{label}*\n"
+    message += f"*{title}*\n"
+
+    if original_price and original_price != price:
+        message += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
+    else:
+        message += f"💰 *₹{price}*\n"
+
+    message += f"⭐ {rating}\n[🔗 View Deal]({url})\n"
+    return message.strip()
+
 
 def format_top5_html(category_name: str, products: list) -> str:
     header = f"<b>📢 {category_name.upper()} DEALS</b>\n\n"
@@ -203,22 +220,26 @@ def format_top5_html(category_name: str, products: list) -> str:
     return (header + body).strip()
 
 def format_markdown_caption(product: dict) -> str:
-    title = product["title"].replace('[', '\\[').replace(']', '\\]').replace('_', '\\_').replace('*', '\\*')
+    from modules.utils import apply_affiliate_tag, shorten_url
+
+    title = escape_markdown(product["title"])
     price = product.get("price", "N/A")
     original_price = product.get("original_price", "")
+    discount_percent = product.get("discount_percent", "")
     rating = product.get("rating", "")
     reviews = product.get("reviews", "")
-    label = product.get("label", "")
-    url = product["url"]
+    label = escape_markdown(product.get("label", ""))
+    url = shorten_url(apply_affiliate_tag(product["url"]))
 
     caption = f"{label} *{title}*\n"
-    caption += f"💰 Price: ₹{price}"
     if original_price and original_price != price:
-        caption += f" (~~₹{original_price}~~)"
-    caption += f"\n⭐ Rating: {rating} ({reviews} reviews)\n"
+        caption += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
+    else:
+        caption += f"💰 *₹{price}*\n"
+    caption += f"⭐ {rating} ({reviews} reviews)\n"
     caption += f"[🔗 View on Amazon]({url})"
+    return caption.strip()
 
-    return caption
 
 
 def format_html_message(product: dict) -> str:
