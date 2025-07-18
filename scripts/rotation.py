@@ -20,9 +20,9 @@ def get_day():
 
 # 🛒 Top 5 Per Category
 from modules.templates import build_product_message, build_category_header
-from modules.telegram import send as send_message
-from modules.scraper import scrape_category_products
-from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
+from modules.telegram import send as await send_markdown
+
+
 import random
 from datetime import datetime
 from modules.utils import deduplicate_variants
@@ -90,7 +90,8 @@ async def send_hidden_gem():
     gem = get_hidden_gem()
     if gem:
         message = f"💎 *HIDDEN GEM:*\n\n*{gem['category']}*\n🔗 [View on Amazon]({gem['url']})"
-        await send_message(message)
+        await send_markdown(message)
+
 
 
 # 💸 Budget Picks
