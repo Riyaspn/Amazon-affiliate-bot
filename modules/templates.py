@@ -192,7 +192,7 @@ def build_product_message(product: dict) -> str:
 
 
 
-def format_top_5_product_message_markdown(product, index):
+def format_top_5_product_message(product, index):
     label = "🔥 Hot Deal" if index == 0 else (
         "💸 Premium Pick" if index == 1 else "⭐ Top Rated"
     )
