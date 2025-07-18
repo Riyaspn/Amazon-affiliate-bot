@@ -62,36 +62,38 @@ def truncate(text, limit=100):
     text = text.strip()
     return text[:limit].rsplit(' ', 1)[0] + "..." if len(text) > limit else text
 
-def build_combo_message(label, products, category_url=None):
-    if not products or not isinstance(products, list):
-        return f"⚠️ No combo products found for <b>{html.escape(label)}</b>."
+import re
+from modules.utils import apply_affiliate_tag, shorten_url
 
-    message = f"🎯 <b>Combo Deal – {html.escape(label)}</b>\n\n"
+def escape_markdown(text: str) -> str:
+    """
+    Escapes special characters in text for Markdown V2.
+    """
+    return re.sub(r'([_*\[\]()~`>#+-=|{}.!])', r'\\\1', text)
 
-    for product in products:
-        try:
-            title = html.escape(truncate(product.get("title", "No title")))
-            price = html.escape(product.get("price", "N/A"))
-            rating = html.escape(product.get("rating", "⭐ N/A"))
-            url = product.get("url", "#")  # DO NOT escape href URLs
-            label_tag = html.escape(product.get("label", "⭐ Top Rated"))
+def build_combo_message(label, products):
+    if not products:
+        return None, None
 
-            message += (
-                f"{label_tag} <b>{title}</b>\n"
-                f"{price} | ⭐ {rating}\n"
-                f"<a href=\"{url}\">🔗 View Deal</a>\n\n"
-            )
-        except Exception as e:
-            message += f"⚠️ Error formatting product: {html.escape(str(e))}\n"
+    product = max(
+        products,
+        key=lambda p: int(p.get("discount_percent", "0").replace("%", "").strip())
+    )
 
-    if category_url:
-        # DO NOT escape href URL
-        message += (
-            f"<i>🔎 Explore more combo deals:</i> "
-            f"<a href=\"{category_url}\">Browse Category</a>"
-        )
+    title = escape_markdown(product["title"])
+    original_price = product["original_price"]
+    discounted_price = product["discounted_price"]
+    discount_percent = product["discount_percent"]
+    image_url = product["image"]
+    product_url = shorten_url(apply_affiliate_tag(product["url"]))
 
-    return message.strip()
+    header = f"🎯 *{escape_markdown(label)} Combo Deal* 🎯"
+    price_info = f"*Price:* ~~₹{original_price}~~ → *₹{discounted_price}* (`{discount_percent}`)"
+    footer = f"[🛒 Grab Now]({product_url})"
+
+    caption = f"{header}\n\n*{title}*\n\n{price_info}\n\n{footer}"
+    return image_url, caption
+
 
 
 
@@ -109,13 +111,24 @@ def build_combo_message(label, products, category_url=None):
 
 def build_product_of_day_message(product):
     label = "🔍 *Product of the Day*"
-    return f"""{label}
+    title = product.get('title', 'No title').replace('*', '').replace('_', '')
+    price = product.get('price', 'N/A')
+    rating = product.get('rating', '⭐ N/A')
+    url = product.get('link') or product.get('url', '#')
+    image = product.get('image')
 
-🛒 *{product['title']}*
-💰 {product['price']}
-⭐ {product['rating']}
-🔗 [View on Amazon]({product['link']})
-"""
+    # Message for plain text delivery (without image)
+    text_message = f"""{label}
+
+🛒 *{title}*
+💰 {price}
+⭐ {rating}
+🔗 [View on Amazon]({url})"""
+
+    # Image caption using Markdown
+    image_caption = f"""🔍 *Product of the Day*\n*{title}*\n💰 {price}\n⭐ {rating}\n[🔗 View on Amazon]({url})"""
+
+    return text_message.strip(), image_caption.strip(), image
 
 
 
