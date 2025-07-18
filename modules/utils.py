@@ -195,3 +195,12 @@ async def get_browser_context(browser_type):
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     )
     return browser, context
+
+
+def escape_markdown(text: str) -> str:
+    """
+    Escapes Telegram MarkdownV2 special characters.
+    """
+    if not text:
+        return ""
+    return re.sub(r'([_*\[\]()~`>#+=|{}.!\\-])', r'\\\1', text)
