@@ -17,6 +17,7 @@ async def async_extract_product_data(card):
     from modules.utils import apply_affiliate_tag, shorten_url, format_price
 
     try:
+        # Title and link
         title_elem = await card.query_selector("h2 a span")
         title = await title_elem.inner_text() if title_elem else "No title"
 
@@ -26,15 +27,18 @@ async def async_extract_product_data(card):
         affiliate_url = apply_affiliate_tag(raw_url)
         short_url = await shorten_url(affiliate_url)
 
+        # Image
         image_elem = await card.query_selector("img")
         image = await image_elem.get_attribute("src") if image_elem else ""
 
+        # Price and MRP
         price_elem = await card.query_selector("span.a-price > span.a-offscreen")
         price_str = await price_elem.inner_text() if price_elem else None
 
         mrp_elem = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
         mrp_str = await mrp_elem.inner_text() if mrp_elem else None
 
+        # Rating
         rating_elem = await card.query_selector("span.a-icon-alt")
         rating = await rating_elem.inner_text() if rating_elem else ""
 
@@ -49,8 +53,9 @@ async def async_extract_product_data(card):
             except:
                 pass
 
-        # Extract ONLY Bank Offer from offers section
+        # Offer Section
         bank_offer_text = None
+        normal_offer_text = None
         offers_section = await card.query_selector('div.vsx__offers.multipleProducts')
         if offers_section:
             offer_cards = await offers_section.query_selector_all('li.a-carousel-card')
@@ -59,11 +64,13 @@ async def async_extract_product_data(card):
                 desc_elem = await offer_card.query_selector('span.a-truncate-full.a-offscreen')
                 title_text = (await title_elem.inner_text()).strip() if title_elem else None
                 desc_text = (await desc_elem.inner_text()).strip() if desc_elem else None
+
                 if title_text == "Bank Offer" and desc_text:
                     bank_offer_text = desc_text
-                    break  # stop after first bank offer found
+                elif title_text and desc_text:
+                    normal_offer_text = desc_text
 
-        # Urgency flag (optional)
+        # Urgency (e.g., "Only 3 left")
         urgency = None
         urgency_elem = await card.query_selector("span.a-color-price")
         if urgency_elem:
@@ -82,7 +89,8 @@ async def async_extract_product_data(card):
             "rating": rating.strip(),
             "urgency": urgency,
             "image": image,
-            "bank_offer": bank_offer_text,  # Only bank offer text here
+            "bank_offer": bank_offer_text,       # 💳 Bank Offer
+            "normal_offer": normal_offer_text    # 💥 Non-bank offer (if any)
         }
 
     except Exception as e:
