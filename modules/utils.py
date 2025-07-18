@@ -52,11 +52,13 @@ def apply_affiliate_tag(link, tag=AFFILIATE_TAG):
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
 
-def format_price(price_text):
+def format_price(raw):
     try:
-        return float(price_text.replace("₹", "").replace(",", "").strip())
+        price = float(str(raw).replace("₹", "").replace(",", "").strip())
+        return f"₹{price:.2f}"
     except:
-        return 0.0
+        return "₹0.00"
+
 
 def add_label(product):
     labels = []
