@@ -31,25 +31,11 @@ from modules.utils import deduplicate_variants
 
 # rotation.py
 
-from modules.categories import ROTATING_CATEGORIES, FIXED_CATEGORIES
-from modules.scraper import scrape_category_products
-from modules.templates import build_product_message
-
-
-from modules.templates import format_top_5_product_message  # ✅ Ensure this is imported properly
-
-from random import sample
-
-
-from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.scraper import scrape_category_products
-from modules.telegram import send_html
-from modules.templates import format_top5_html
+from modules.templates import format_top5_markdown  # ✅ NEW import
 
 async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
-    from modules.templates import format_top5_html
-    from modules.telegram import send_html
+    from modules.telegram import send_markdown  # ✅ use markdown now
     from modules.scraper import scrape_category_products
     from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
     import random
@@ -57,14 +43,14 @@ async def send_top5_per_category(fixed=False):
     if fixed:
         selected_categories = list(FIXED_CATEGORIES.items())[:3]
     else:
-        selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)  # allow fallback
+        selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)
 
-    await send_html("🛒 <b>Top 5 Per Category</b>")
+    await send_markdown("🛒 *Top 5 Per Category*")  # ✅ Markdown formatting
 
     count = 0
     for category_name, category_url in selected_categories:
         if count >= 3:
-            break  # Limit to 3 successful sends
+            break
 
         print(f"🔍 Scraping Bestsellers: {category_name}")
         products = await scrape_category_products(category_name, category_url, max_results=15)
@@ -80,13 +66,12 @@ async def send_top5_per_category(fixed=False):
             print(f"⚠️ No deduplicated products in {category_name}")
             continue
 
-        message = format_top5_html(category_name, top5)
-        await send_html(message)
+        message = format_top5_markdown(category_name, top5)  # ✅ Updated function
+        await send_markdown(message)  # ✅ Updated send function
         count += 1
 
     if count == 0:
-        await send_html("⚠️ No top products found for any category.")
-
+        await send_markdown("⚠️ No top products found for any category.")
 
 
 
