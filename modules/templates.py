@@ -239,5 +239,29 @@ def format_markdown_caption(product: dict) -> str:
     caption += f"[🔗 View on Amazon]({url})"
     return caption.strip()
 
+def format_top5_markdown(category: str, products: list) -> str:
+    lines = [f"*📦 {category}*"]
+    for product in products:
+        title = product.get("title", "").strip()
+        url = product.get("short_url", product.get("url", "")).strip()
+        price = product.get("price", "")
+        mrp = product.get("original_price", "")
+        discount = product.get("discount", "")
+        offer = product.get("offer", "") or product.get("bank_offer", "")
+
+        line = f"🔹 [{title}]({url})\n"
+        if price:
+            line += f"   `{price}`"
+        if discount:
+            line += f" (⚡ {discount})"
+        if mrp and mrp != price:
+            line += f", MRP {mrp}"
+        if offer:
+            line += f"\n   💳 *{offer.strip()}*"
+
+        lines.append(line)
+
+    return "\n\n".join(lines)
+
 
 
