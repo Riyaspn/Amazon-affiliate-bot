@@ -28,8 +28,6 @@ from datetime import datetime
 from modules.utils import deduplicate_variants
 
 
-def get_day():
-    return datetime.now().strftime('%A')
 
 # rotation.py
 
