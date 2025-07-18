@@ -289,23 +289,23 @@ def build_product_message(product: dict) -> str:
     normal_offer = escape_markdown(product.get("normal_offer", ""))
     label = product.get("label", "")
 
-    msg = f"🛍️ *{title}*\n"
+    message = f"🛍️ *{title}*\n"
     if original_price and original_price != price:
-        msg += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
+        message += f"💰 ~~₹{original_price}~~ → *₹{price}* `{discount_percent}`\n"
     else:
-        msg += f"💰 *₹{price}*\n"
+        message += f"💰 *₹{price}*\n"
 
     if bank_offer:
         message += f"💳 *{bank_offer}*\n"
     if normal_offer:
         message += f"💥 *{normal_offer}*\n"
 
-    msg += f"⭐ {rating}\n🔗 [View on Amazon]({url})"
+    message += f"⭐ {rating}\n🔗 [View on Amazon]({url})"
 
     if label:
-        msg += f"\n_{escape_markdown(label)}_"
+        message += f"\n_{escape_markdown(label)}_"
 
-    return msg.strip()
+    return message.strip()
 
 
 
@@ -347,6 +347,8 @@ def format_markdown_caption(product: dict) -> str:
     reviews = product.get("reviews", "")
     label = escape_markdown(product.get("label", ""))
     url = shorten_url(apply_affiliate_tag(product["url"]))
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
 
     caption = f"{label} *{title}*\n"
     if original_price and original_price != price:
@@ -354,6 +356,11 @@ def format_markdown_caption(product: dict) -> str:
     else:
         caption += f"💰 *₹{price}*\n"
     caption += f"⭐ {rating} ({reviews} reviews)\n"
+    if bank_offer:
+        caption += f"\n💳 *{bank_offer}*"
+    if normal_offer:
+        caption += f"\n💥 *{normal_offer}*"
+
     caption += f"[🔗 View on Amazon]({url})"
     return caption.strip()
 
@@ -365,7 +372,8 @@ def format_top5_markdown(category: str, products: list) -> str:
         price = product.get("price", "")
         mrp = product.get("original_price", "")
         discount = product.get("discount", "")
-        offer = product.get("offer", "") or product.get("bank_offer", "")
+        bank_offer = escape_markdown(product.get("bank_offer", ""))
+        normal_offer = escape_markdown(product.get("normal_offer", ""))
 
         line = f"🔹 [{title}]({url})\n"
         if price:
@@ -374,8 +382,10 @@ def format_top5_markdown(category: str, products: list) -> str:
             line += f" (⚡ {discount})"
         if mrp and mrp != price:
             line += f", MRP {mrp}"
-        if offer:
-            line += f"\n   💳 *{offer.strip()}*"
+        if bank_offer:
+            message += f"💳 *{bank_offer}*\n"
+        if normal_offer:
+            message += f"💥 *{normal_offer}*\n"
 
         lines.append(line)
 
