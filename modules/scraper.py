@@ -61,15 +61,18 @@ async def async_extract_product_data(card):
         # Urgency check (presence of deal badge or countdown)
         urgency_elem = await card.query_selector(".deal-badge, .s-badge-text, .countdown")
         urgency = bool(urgency_elem)
+        image_elem = await card.query_selector("img")
+        image = await image_elem.get_attribute("src") if image_elem else None
 
         return {
             "title": title.strip(),
             "url": link,
             "price": format_price(price_str),
-            "mrp": format_price(mrp_str) if mrp_str else None,
+            "original_price": format_price(mrp_str) if mrp_str else None,
             "discount_percent": discount_percent,
             "rating": rating,
             "urgency": urgency,
+            "image": image,
         }
     except Exception as e:
         print(f"⚠️ Error extracting product data: {e}")
