@@ -36,18 +36,33 @@ def build_hidden_gem_message(category_name, products):
 
 
 def build_budget_picks_message(products):
-    from modules.utils import apply_affiliate_tag, shorten_url
+    """
+    Format budget picks products into a Markdown message.
+    Includes price, discount, and bank offers if available.
+    """
+    lines = ["💸 *Top Budget Picks (Under ₹999)*\n"]
 
-    header = "💸 *Top Budget Picks (Under ₹999)*\n"
-    body = ""
-    for p in products:
-        title = escape_markdown(p["title"])
-        price = p.get("price", "N/A")
-        rating = escape_markdown(p.get("rating", ""))
-        url = shorten_url(apply_affiliate_tag(p.get("url", "#")))
+    for product in products:
+        title = product.get("title", "").strip()
+        url = product.get("short_url", product.get("url", "")).strip()
+        price = product.get("price", "")
+        original_price = product.get("original_price", "")
+        discount = product.get("discount_percent", "")
+        offer = product.get("offer", "") or product.get("bank_offer", "")
 
-        body += f"\n[{title}]({url})\n💰 ₹{price}   ⭐ {rating}\n"
-    return header + body.strip()
+        line = f"🔹 [{title}]({url})\n"
+        if price:
+            line += f"   `₹{price}`"
+        if discount:
+            line += f" (⚡ {discount})"
+        if original_price and original_price != price:
+            line += f", MRP ₹{original_price}"
+        if offer:
+            line += f"\n   💳 *{offer.strip()}*"
+
+        lines.append(line)
+
+    return "\n\n".join(lines).strip()
 
 
 
