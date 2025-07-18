@@ -14,21 +14,35 @@ def build_hidden_gem_message(category_name, products):
     if not products:
         return None
 
-    message = f"📢 💎 *HIDDEN GEM: {category_name.upper()} DEALS*\n\n"
+    message = f"📢 💎 *HIDDEN GEM: {escape_markdown(category_name.upper())} DEALS*\n\n"
     for i, product in enumerate(products):
         label = "🔥 Hot Deal" if i == 0 else "⭐ Top Pick"
-        title = escape_markdown(product['title'])
-        price = escape_markdown(product['price'])
-        rating = escape_markdown(product['rating'])
-        link = escape_markdown(product['link'])
-        message += f"""{label}
-        🛒 *{title}*
-        💰 {price}
-        ⭐ {rating}
-        🔗 [View on Amazon]({link})
+        title = escape_markdown(product.get('title', 'No title'))
+        price = product.get('price', 'N/A')
+        original_price = product.get('original_price', '')
+        discount = product.get('discount', '')
+        rating = escape_markdown(product.get('rating', ''))
+        url = product.get('url', '')
+        bank_offer = product.get('bank_offer', '') or product.get('offer', '')
 
-"""
+        line = f"{label}\n🛒 *{title}*\n"
+
+        if original_price and original_price != price:
+            line += f"💰 ~~₹{original_price}~~ → *₹{price}* (⚡ {discount})\n"
+        else:
+            line += f"💰 ₹{price}\n"
+
+        line += f"⭐ {rating}\n"
+
+        if url:
+            line += f"🔗 [View on Amazon]({escape_markdown(url)})\n"
+        if bank_offer:
+            line += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+
+        message += line + "\n"
+
     return message.strip()
+
 
 
 
@@ -73,10 +87,30 @@ def build_budget_picks_message(products):
 def build_flash_deals_message(deals):
     message = "⚡ *FLASH DEALS ALERT!*\n\n"
     for deal in deals:
-        title = escape_markdown(deal['title'])
-        url = escape_markdown(deal['url'])
-        message += f"{title}\n🔗 [View Deal]({url})\n\n"
+        title = escape_markdown(deal.get('title', 'No title'))
+        url = deal.get('url', '')
+        price = deal.get('price', '')
+        original_price = deal.get('original_price', '')
+        discount = deal.get('discount', '')
+        bank_offer = deal.get('bank_offer', '') or deal.get('offer', '')
+
+        line = f"🔹 *{title}*\n"
+
+        if original_price and original_price != price:
+            line += f"💰 ~~₹{original_price}~~ → *₹{price}* (⚡ {discount})\n"
+        else:
+            line += f"💰 ₹{price}\n"
+
+        if bank_offer:
+            line += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+
+        if url:
+            line += f"🔗 [View Deal]({escape_markdown(url)})\n"
+
+        message += line + "\n"
+
     return message.strip()
+
 
 
 
@@ -109,18 +143,24 @@ def build_combo_message(label, products):
     )
 
     title = escape_markdown(product["title"])
-    original_price = product["original_price"]
-    discounted_price = product["discounted_price"]
-    discount_percent = product["discount_percent"]
-    image_url = product["image"]
-    product_url = shorten_url(apply_affiliate_tag(product["url"]))
+    original_price = product.get("original_price", "")
+    discounted_price = product.get("discounted_price", "")
+    discount_percent = product.get("discount_percent", "")
+    image_url = product.get("image", "")
+    product_url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
+    bank_offer = product.get("bank_offer", "") or product.get("offer", "")
 
     header = f"🎯 *{escape_markdown(label)} Combo Deal* 🎯"
     price_info = f"*Price:* ~~₹{original_price}~~ → *₹{discounted_price}* (`{discount_percent}`)"
+
+    offer_line = f"\n💳 *{escape_markdown(bank_offer.strip())}*" if bank_offer else ""
+
     footer = f"[🛒 Grab Now]({product_url})"
 
-    caption = f"{header}\n\n*{title}*\n\n{price_info}\n\n{footer}"
+    caption = f"{header}\n\n*{title}*\n\n{price_info}{offer_line}\n\n{footer}"
+
     return image_url, caption
+
 
 
 
@@ -147,6 +187,7 @@ def build_product_of_day_message(product):
     rating = escape_markdown(product.get("rating", "⭐ N/A"))
     image = product.get("image", None)
     url = shorten_url(apply_affiliate_tag(product.get("url", "#")))
+    bank_offer = product.get("bank_offer", "") or product.get("offer", "")
 
     caption = f"🔍 *Product of the Day*\n\n"
     caption += f"*{title}*\n"
@@ -156,9 +197,13 @@ def build_product_of_day_message(product):
     else:
         caption += f"💰 *₹{discounted_price}*\n"
 
+    if bank_offer:
+        caption += f"💳 *{escape_markdown(bank_offer.strip())}*\n"
+
     caption += f"⭐ {rating}\n[🔗 View on Amazon]({url})"
 
     return caption.strip(), caption.strip(), image
+
 
 
 
