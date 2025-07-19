@@ -39,7 +39,8 @@ async def send_top5_per_category(fixed=False):
     else:
         selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)
 
-    await send_markdown("🛒 *Top 5 Per Category*")  # ✅ Markdown formatting
+    await send_message(CHAT_ID, text="🛒 *Top 5 Per Category*", parse_mode="Markdown")
+  # ✅ Markdown formatting
 
     count = 0
     for category_name, category_url in selected_categories:
@@ -61,11 +62,11 @@ async def send_top5_per_category(fixed=False):
             continue
 
         message = format_top5_markdown(category_name, top5)  # ✅ Updated function
-        await send_markdown(message)  # ✅ Updated send function
+        await send_message(message)  # ✅ Updated send function
         count += 1
 
     if count == 0:
-        await send_markdown("⚠️ No top products found for any category.")
+        await send_message("⚠️ No top products found for any category.")
 
 
 
@@ -84,11 +85,11 @@ async def send_hidden_gem():
     gem = get_hidden_gem()
     if gem:
         message = f"💎 *HIDDEN GEM:*\n\n*{gem['category']}*\n🔗 [View on Amazon]({gem['url']})"
-        await send_markdown(message)
+        await send_message(message)
 
 
 
-# 💸 Budget Picks
+
 # 💸 Budget Picks
 from modules.telegram import send as send_message
 from modules.categories import get_random_rotating_categories
