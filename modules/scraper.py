@@ -66,91 +66,54 @@ async def async_extract_product_data(card):
 
 
 
+import asyncio
 from playwright.async_api import async_playwright
-from modules.utils import apply_affiliate_tag, shorten_url, format_price
+from modules.utils import apply_affiliate_tag, shorten_url
+
 
 async def scrape_category_products(category_name, category_url, max_results=15):
-    try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=[
-                "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"
-            ])
-            ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/124.0.0.0 Safari/537.36")
-            context = await browser.new_context(
-                user_agent=ua,
-                viewport={"width": 1280, "height": 800},
-                java_script_enabled=True
-            )
-            page = await context.new_page()
+    """
+    Leverage async_extract_product_data to grab bestseller cards from Amazon.
+    Works on GitHub Actions & headless runners.
+    """
+    results = []
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+        )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800}
+        )
+        page = await context.new_page()
 
+        try:
             await page.goto(category_url, timeout=60000)
-            # Scroll once to trigger lazy-load
             await page.keyboard.press("PageDown")
             await page.wait_for_selector(
-                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout',
+                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout, .p13n-sc-uncoverable-faceout',
                 timeout=15000
             )
 
             cards = await page.query_selector_all(
-                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout'
+                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout, .p13n-sc-uncoverable-faceout'
             )
 
-            results = []
             for card in cards[:max_results]:
-                title_el = await card.query_selector(
-                    'span[data-cy="title-recipe-title"], h2 a span'
-                )
-                title = (await title_el.inner_text()).strip() if title_el else "No title"
-
-                link_el = await card.query_selector("a[href*='/dp/']")
-                href = await link_el.get_attribute("href") if link_el else ""
-                url = "https://www.amazon.in" + href
-                url = apply_affiliate_tag(url)
-
-                img_el = await card.query_selector("img")
-                img = await img_el.get_attribute("src") if img_el else ""
-
-                price_el = await card.query_selector(
-                    'span.a-price-whole, span.a-price .a-offscreen'
-                )
-                price_str = (await price_el.inner_text()) if price_el else None
-
-                mrp_el = await card.query_selector(
-                    'span.a-price.a-text-price .a-offscreen'
-                )
-                mrp_str = (await mrp_el.inner_text()) if mrp_el else None
-
-                rating_el = await card.query_selector('span.a-icon-alt')
-                rating = (await rating_el.inner_text()) if rating_el else ""
-
-                discount = None
-                if price_str and mrp_str:
-                    try:
-                        p = float(price_str.replace("₹", "").replace(",", ""))
-                        m = float(mrp_str.replace("₹", "").replace(",", ""))
-                        discount = f"{round((m - p) / m * 100)}%" if m > p else None
-                    except:
-                        pass
-
-                results.append({
-                    "title": title,
-                    "url": url,
-                    "short_url": shorten_url(url),
-                    "price": format_price(price_str),
-                    "original_price": format_price(mrp_str),
-                    "discount": discount,
-                    "rating": rating,
-                    "image": img,
-                })
+                product = await async_extract_product_data(card)
+                if product and product["title"] != "No title":
+                    results.append(product)
 
             await browser.close()
             return results
-    except Exception as e:
-        print("❌ Scraper error:", e)
-        return []
 
+        except Exception as e:
+            print("❌ scrape_category_products:", e)
+            await browser.close()
+            return []
 
 
 
