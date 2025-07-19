@@ -76,6 +76,12 @@ async def scrape_category_products(category_name, category_url, max_results=15):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36"
             )
             page = await context.new_page()
+            await context.add_cookies([
+            {"name": "session-id", "value": "dummy", "domain": ".amazon.in", "path": "/"},
+            ])
+            await page.set_extra_http_headers({
+            "accept-language": "en-GB,en;q=0.9",
+            })
             await page.goto(category_url, timeout=60000)
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=15000)
 
