@@ -68,8 +68,7 @@ async def async_extract_product_data(card):
 
 import random
 import asyncio
-from modules.utils import async_extract_product_data
-from modules.scraper import get_browser_type
+from modules.utils import get_browser_type
 
 async def scrape_top5_per_category(category, url):
     try:
