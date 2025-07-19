@@ -72,8 +72,12 @@ from modules.utils import get_browser_type
 
 async def scrape_top5_per_category(category, url):
     try:
-        browser_type = get_browser_type()
-        browser = await browser_type.launch(headless=True)
+        browser_type = get_browser_type(p)
+        browser = await browser_type.launch(
+        headless=True,
+        args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+        )
+
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
             java_script_enabled=True,
