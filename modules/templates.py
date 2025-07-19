@@ -9,8 +9,8 @@ def format_top5_markdown(products, category):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p['bank_offer'])
-        normal_offer = escape_markdown(p['normal_offer'])
+        bank_offer = escape_markdown(p.get('bank_offer') or "")
+        normal_offer = escape_markdown(p.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
@@ -37,8 +37,8 @@ def format_budget_picks(products):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p['bank_offer'])
-        normal_offer = escape_markdown(p['normal_offer'])
+        bank_offer = escape_markdown(p.get('bank_offer') or "")
+        normal_offer = escape_markdown(p.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
@@ -63,8 +63,8 @@ def build_product_message(product, label_emoji="⭐"):
     price = escape_markdown(product["price"])
     mrp = escape_markdown(product["mrp"])
     discount = escape_markdown(product["discount"])
-    bank_offer = escape_markdown(product["bank_offer"])
-    normal_offer = escape_markdown(product["normal_offer"])
+    bank_offer = escape_markdown(p.get('bank_offer') or "")
+    normal_offer = escape_markdown(p.get('normal_offer') or "")
 
     message = f"{label_emoji} *[{title}]({url})*\n\n"
     if discount:
@@ -86,8 +86,8 @@ def build_photo_caption(product, label_emoji="🛍️"):
     price = escape_markdown(product["price"])
     mrp = escape_markdown(product["mrp"])
     discount = escape_markdown(product["discount"])
-    bank_offer = escape_markdown(product["bank_offer"])
-    normal_offer = escape_markdown(product["normal_offer"])
+    bank_offer = escape_markdown(p.get('bank_offer') or "")
+    normal_offer = escape_markdown(p.get('normal_offer') or "")
 
     message = f"{label_emoji} *[{title}]({url})*\n\n"
     if discount:
@@ -117,8 +117,8 @@ def format_hidden_gems(products):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p['bank_offer'])
-        normal_offer = escape_markdown(p['normal_offer'])
+        bank_offer = escape_markdown(p.get('bank_offer') or "")
+        normal_offer = escape_markdown(p.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
