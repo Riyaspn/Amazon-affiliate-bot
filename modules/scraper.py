@@ -14,87 +14,52 @@ from modules.prebuilt import BUDGET_PICK_CATEGORIES
 
 # Shared product extraction function
 async def async_extract_product_data(card):
-    from modules.utils import apply_affiliate_tag, shorten_url, format_price
-
     try:
-        # Title and link
-        title_elem = await card.query_selector("h2 a span, span[data-cy='title-recipe-title']")
-        title = await title_elem.inner_text() if title_elem else "No title"
+        # ==== TITLE ====
+        title_elem = await card.query_selector(
+            'span[data-cy="title-recipe-title"], h2 a span, .p13n-sc-truncate-desktop-type2'
+        )
+        title = (await title_elem.inner_text()).strip() if title_elem else "No title"
 
-        link_elem = await card.query_selector("h2 a")
+        # ==== URL ====
+        link_elem = await card.query_selector('h2 a, .a-link-normal')
         link = await link_elem.get_attribute("href") if link_elem else ""
         raw_url = "https://www.amazon.in" + link
         affiliate_url = apply_affiliate_tag(raw_url)
         short_url = shorten_url(affiliate_url)
 
-        # Image
-        image_elem = await card.query_selector("img")
-        image = await image_elem.get_attribute("src") if image_elem else ""
+        # ==== IMAGE ====
+        img_elem = await card.query_selector('img[src*=".jpg"], img[src*=".png"]')
+        image = await img_elem.get_attribute("src") if img_elem else ""
 
-        # Price and MRP
-        price_elem = await card.query_selector("span.a-price-whole, span.a-price .a-offscreen")
+        # ==== PRICE ====
+        price_elem = await card.query_selector(
+            'span.a-price .a-offscreen, span.a-price-whole'
+        )
         price_str = await price_elem.inner_text() if price_elem else None
 
-        mrp_elem = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
+        # ==== ORIGINAL / MRP ====
+        mrp_elem = await card.query_selector(
+            'span.a-price.a-text-price .a-offscreen'
+        )
         mrp_str = await mrp_elem.inner_text() if mrp_elem else None
 
-        # Rating
-        rating_elem = await card.query_selector("span.a-icon-alt")
-        rating = await rating_elem.inner_text() if rating_elem else ""
-
-        # Discount percent
-        discount_percent = None
-        if price_str and mrp_str:
-            try:
-                price = float(price_str.replace("₹", "").replace(",", "").strip())
-                mrp = float(mrp_str.replace("₹", "").replace(",", "").strip())
-                if mrp > price:
-                    discount_percent = round((mrp - price) / mrp * 100)
-            except:
-                pass
-
-        # Offer Section
-        bank_offer_text = None
-        normal_offer_text = None
-        offers_section = await card.query_selector('div.vsx__offers.multipleProducts')
-        if offers_section:
-            offer_cards = await offers_section.query_selector_all('li.a-carousel-card')
-            for offer_card in offer_cards:
-                title_elem = await offer_card.query_selector('h6.offers-items-title')
-                desc_elem = await offer_card.query_selector('span.a-truncate-full.a-offscreen')
-                title_text = (await title_elem.inner_text()).strip() if title_elem else None
-                desc_text = (await desc_elem.inner_text()).strip() if desc_elem else None
-
-                if title_text == "Bank Offer" and desc_text:
-                    bank_offer_text = desc_text
-                elif title_text and desc_text:
-                    normal_offer_text = desc_text
-
-        # Urgency (e.g., "Only 3 left")
-        urgency = None
-        urgency_elem = await card.query_selector("span.a-color-price")
-        if urgency_elem:
-            urgency_text = await urgency_elem.inner_text()
-            if any(keyword in urgency_text.lower() for keyword in ["limited", "only", "left"]):
-                urgency = urgency_text
+        # ==== RATING ====
+        rating_elem = await card.query_selector('span.a-icon-alt')
+        rating = await rating_elem.inner_text() if rating_elem else "N/A"
 
         return {
-            "title": title.strip(),
+            "title": title,
             "url": affiliate_url,
             "short_url": short_url,
             "price": format_price(price_str),
             "original_price": format_price(mrp_str) if mrp_str else None,
-            "discount_percent": f"{discount_percent}%" if discount_percent else None,
-            "discount": f"{discount_percent}%" if discount_percent else None,
-            "rating": rating.strip(),
-            "urgency": urgency,
+            "discount": None,  # calculate later if needed
+            "rating": rating,
             "image": image,
-            "bank_offer": bank_offer_text,       # 💳 Bank Offer
-            "normal_offer": normal_offer_text    # 💥 Non-bank offer (if any)
         }
-
     except Exception as e:
-        print("Error in async_extract_product_data:", e)
+        print("🔍 Extract error:", e)
         return None
 
 
