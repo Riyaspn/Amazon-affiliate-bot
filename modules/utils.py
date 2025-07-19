@@ -209,6 +209,12 @@ def escape_markdown(text: str) -> str:
         return ""
     return re.sub(r'([_*\[\]()~`>#+=|{}.!\\-])', r'\\\1', text)
 
+def get_browser_type(playwright):
+    import os
+    # Default to Chromium on GitHub Actions; Firefox for local testing
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        return playwright.chromium
+    return playwright.firefox
 
 
 
