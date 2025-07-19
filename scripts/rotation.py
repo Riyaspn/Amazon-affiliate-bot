@@ -39,7 +39,7 @@ async def send_top5_per_category(fixed=False):
     else:
         selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)
 
-    await send_message(CHAT_ID, text="🛒 *Top 5 Per Category*", parse_mode="Markdown")
+    await send_message("🛒 *Top 5 Per Category*", parse_mode="Markdown")
   # ✅ Markdown formatting
 
     count = 0
