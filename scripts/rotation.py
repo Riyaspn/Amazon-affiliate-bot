@@ -205,7 +205,7 @@ async def send_combo_deal(max_products=1):
             print(f"🌐 Attempt {attempt + 1}: Visiting {category_url}")
 
             async with async_playwright() as p:
-                browser_type = get_browser_type(p)
+                browser_type = get_browser_type()  # ✅ correct
                 browser = await browser_type.launch(headless=True)
                 context = await browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
