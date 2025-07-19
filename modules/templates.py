@@ -136,3 +136,33 @@ def format_hidden_gems(products):
         line += "\n"
         message += line
     return message.strip()
+
+
+# In modules/templates.py
+
+def format_markdown_caption(product: dict, label: str) -> str:
+    title = product.get("title", "No title")
+    price = product.get("price", "")
+    original_price = product.get("original_price", "")
+    discount = product.get("discount", "")
+    bank_offer = product.get("bank_offer", "")
+    url = product.get("short_url", product.get("url", ""))
+
+    caption = f"*{label}*\n"
+    caption += f"{title}\n\n"
+
+    if original_price and original_price != price:
+        caption += f"~₹{original_price}~  👉 ₹{price}\n"
+    else:
+        caption += f"Price: ₹{price}\n"
+
+    if discount:
+        caption += f"🔻 *{discount}*\n"
+
+    if bank_offer:
+        caption += f"🏦 {bank_offer}\n"
+
+    caption += f"\n[🛒 Buy Now]({url})"
+
+    return caption
+
