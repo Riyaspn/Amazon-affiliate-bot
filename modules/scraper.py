@@ -208,7 +208,6 @@ async def scrape_single_combo_product(label, url):
 
 import random
 from modules.utils import apply_affiliate_tag, shorten_url
-from modules.utils import get_browser_type, get_browser_context
 from modules.prebuilt import BUDGET_PICK_CATEGORIES
 from playwright.async_api import async_playwright
 
