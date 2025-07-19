@@ -208,3 +208,15 @@ def escape_markdown(text: str) -> str:
     if not text:
         return ""
     return re.sub(r'([_*\[\]()~`>#+=|{}.!\\-])', r'\\\1', text)
+
+
+def get_browser_type():
+    from playwright.async_api import async_playwright
+    import os
+
+    browser_choice = os.getenv("BROWSER", "chromium").lower()
+    if browser_choice == "firefox":
+        return async_playwright().firefox
+    elif browser_choice == "webkit":
+        return async_playwright().webkit
+    return async_playwright().chromium
