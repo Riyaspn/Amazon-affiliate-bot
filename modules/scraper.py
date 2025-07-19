@@ -105,8 +105,7 @@ async def scrape_category_products(category_name, category_url, max_results=15):
     print(f"🔍 Scraping Bestsellers: {category_name}")
     try:
         async with async_playwright() as p:
-            browser_type_str = get_browser_type()
-            browser_type = getattr(p, browser_type_str)
+            browser_type = p.chromium  
             browser = await browser_type.launch(headless=True)
 
             context = await browser.new_context(
@@ -146,8 +145,7 @@ async def scrape_product_of_the_day(url):
     print("🔍 Scraping Product of the Day")
     try:
         async with async_playwright() as p:
-            browser_type_str = get_browser_type()
-            browser_type = getattr(p, browser_type_str)  # convert string to actual object
+            browser_type = p.chromium  
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
@@ -178,8 +176,7 @@ async def scrape_single_combo_product(label, url):
     print(f"🌐 Scraping Combo Deal: {label}")
     try:
         async with async_playwright() as p:
-            browser_type_str = get_browser_type()
-            browser_type = getattr(p, browser_type_str)  # convert string to actual object
+            browser_type = p.chromium  
             browser = await browser_type.launch(headless=True)
             context = await browser.new_context(
                 java_script_enabled=True,
@@ -219,8 +216,7 @@ async def scrape_budget_products():
     selected = random.sample(list(BUDGET_PICK_CATEGORIES.items()), 5)
     results = []
 
-    browser_type_str = get_browser_type()
-    browser_type = getattr(p, browser_type_str)  # convert string to actual object
+    browser_type = p.chromium  
     browser = await browser_type.launch(headless=True)
     async with async_playwright() as p:
         browser = await browser_type.launch(headless=True)
