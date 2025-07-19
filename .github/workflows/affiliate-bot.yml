@@ -32,6 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           python -m playwright install chromium  # ⚡️ Fast, Chromium-only
+          pip install httpx
 
       - name: Run main.py
         env:
