@@ -60,7 +60,7 @@ async def send_top5_per_category(fixed=False):
             print(f"⚠️ No deduplicated products in {category_name}")
             continue
 
-        message = format_top5_markdown(category_name, top5)  # ✅ Updated function
+        message = format_top5_markdown(top5, category_name) # ✅ Updated function
         await send_message(message)  # ✅ Updated send function
         count += 1
 
