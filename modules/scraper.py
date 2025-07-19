@@ -18,7 +18,7 @@ async def async_extract_product_data(card):
 
     try:
         # Title and link
-        title_elem = await card.query_selector("h2 a span")
+        title_elem = await card.query_selector("h2 a span, span[data-cy='title-recipe-title']")
         title = await title_elem.inner_text() if title_elem else "No title"
 
         link_elem = await card.query_selector("h2 a")
@@ -32,7 +32,7 @@ async def async_extract_product_data(card):
         image = await image_elem.get_attribute("src") if image_elem else ""
 
         # Price and MRP
-        price_elem = await card.query_selector("span.a-price > span.a-offscreen")
+        price_elem = await card.query_selector("span.a-price-whole, span.a-price .a-offscreen")
         price_str = await price_elem.inner_text() if price_elem else None
 
         mrp_elem = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
