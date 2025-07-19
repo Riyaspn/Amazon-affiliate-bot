@@ -210,7 +210,5 @@ def escape_markdown(text: str) -> str:
     return re.sub(r'([_*\[\]()~`>#+=|{}.!\\-])', r'\\\1', text)
 
 
-def get_browser_type():
-    import os
-    return os.getenv("BROWSER", "chromium").lower()
+
 
