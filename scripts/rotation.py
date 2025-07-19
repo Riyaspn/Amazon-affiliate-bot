@@ -29,7 +29,7 @@ from modules.templates import format_top5_markdown  # ✅ NEW import
 
 async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
-    from modules.telegram import send_markdown  # ✅ use markdown now
+    from modules.telegram import send as send_markdown  # ✅ use markdown now
     from modules.scraper import scrape_category_products
     from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
     import random
