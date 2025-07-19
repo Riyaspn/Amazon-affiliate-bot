@@ -217,7 +217,7 @@ async def scrape_budget_products():
 
         for label, url in selected:
             try:
-                await page.goto(url, timeout=60000)
+                await page.goto(category_url, timeout=60000)
                 await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
 
                 cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
@@ -227,7 +227,7 @@ async def scrape_budget_products():
                         product["url"] = await shorten_url(apply_affiliate_tag(product["url"]))
                         results.append((label, product))
                         break  # Only one product per category
-                if len(results) == 5:
+                if len(results) >= max_results:
                     break  # Stop once 5 total products are collected
 
             except Exception as e:
