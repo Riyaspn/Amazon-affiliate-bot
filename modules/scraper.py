@@ -106,15 +106,17 @@ async def scrape_category_products(category_name, category_url, max_results=15):
     try:
         async with async_playwright() as p:
             browser_type_str = get_browser_type()
-            browser_type = getattr(p, browser_type_str)  # convert string to actual object
+            browser_type = getattr(p, browser_type_str)
             browser = await browser_type.launch(headless=True)
+
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/91.0.4472.124 Safari/537.36"
             )
             page = await context.new_page()
-            await page.goto(url, timeout=60000)
+            await page.goto(category_url, timeout=60000)
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=15000)
+
             cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout")
 
             results = []
@@ -124,14 +126,16 @@ async def scrape_category_products(category_name, category_url, max_results=15):
                 if data and data["title"] not in seen_titles:
                     results.append(data)
                     seen_titles.add(data["title"])
-                if len(results) >= limit:
+                if len(results) >= max_results:
                     break
 
             await browser.close()
             return results[:max_results]
+
     except Exception as e:
-        print(f"⚠️ Failed to fetch page for {category_name}")
+        print(f"⚠️ Failed to fetch page for {category_name}: {e}")
         return []
+
 
 
 
