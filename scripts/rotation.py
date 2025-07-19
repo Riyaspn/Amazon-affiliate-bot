@@ -1,6 +1,6 @@
 import random
 from datetime import datetime
-from modules.templates import format_top5_markdown_message
+from modules.templates import format_top5_markdown
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.templates import build_product_message
 from modules.templates import build_category_header
@@ -61,7 +61,7 @@ async def send_top5_per_category(fixed=False):
             print(f"⚠️ No deduplicated products in {category_name}")
             continue
 
-        message = format_top5_markdown_message(category_name, top5)  # ✅ Updated function
+        message = format_top5_markdown(category_name, top5)  # ✅ Updated function
         await send_message(message)  # ✅ Updated send function
         count += 1
 
