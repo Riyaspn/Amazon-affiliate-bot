@@ -66,42 +66,78 @@ async def async_extract_product_data(card):
 
 
 
+import httpx
+import re
+
 async def scrape_category_products(category_name, category_url, max_results=15):
-    print(f"🔍 Scraping Bestsellers: {category_name}")
+    """
+    Fetch bestseller JSON for the given category.
+    Example endpoint pattern used by Amazon:
+    https://www.amazon.in/api/s?k=<keyword>&s=exact-aware-popularity-rank
+    """
+    # Derive keyword from category (fallback to category name)
+    keyword = re.sub(r"[^\w\s]", "", category_name).replace(" ", "+")
+    api_url = (
+        f"https://www.amazon.in/api/s?k={keyword}"
+        "&s=exact-aware-popularity-rank&crid=1&sprefix={keyword}%2Caps%2C"
+    )
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/119.0 Safari/537.36",
+        "Accept-Language": "en-GB,en;q=0.9",
+    }
+
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-            java_script_enabled=True,
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/119.0.0.0 Safari/537.36"
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(api_url, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+
+        # Navigate to the right node
+        items = (
+            data.get("searchResult", {})
+                .get("items", [])[:max_results]
+        )
+
+        products = []
+        for itm in items:
+            title = (
+                itm.get("title", {}).get("display", "")
+                or itm.get("title", "")  # fallback
             )
-            page = await context.new_page()
-            await context.add_cookies([
-            {"name": "session-id", "value": "dummy", "domain": ".amazon.in", "path": "/"},
-            ])
-            await page.set_extra_http_headers({
-            "accept-language": "en-GB,en;q=0.9",
+            price = (
+                itm.get("price", {})
+                   .get("current", {})
+                   .get("display", "")
+            )
+            mrp = (
+                itm.get("price", {})
+                   .get("previous", {})
+                   .get("display", "")
+            )
+            img = itm.get("image", {}).get("url", "")
+            url = "https://www.amazon.in" + itm.get("url", "")
+            rating = itm.get("rating", {}).get("display", "N/A")
+
+            products.append({
+                "title": title,
+                "url": apply_affiliate_tag(url),
+                "short_url": shorten_url(apply_affiliate_tag(url)),
+                "price": price,
+                "original_price": mrp if mrp and mrp != price else None,
+                "discount": None,
+                "rating": rating,
+                "image": img,
+                "bank_offer": None,
+                "normal_offer": None,
+                "urgency": None,
             })
-            await page.goto(category_url, timeout=60000)
-            await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=15000)
-
-            cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout")
-
-            results = []
-            seen_titles = set()
-            for card in cards:
-                data = await async_extract_product_data(card)
-                if data and data["title"] not in seen_titles:
-                    results.append(data)
-                    seen_titles.add(data["title"])
-                if len(results) >= max_results:
-                    break
-
-            await browser.close()
-            return results[:max_results]
+        return products
 
     except Exception as e:
-        print(f"⚠️ Failed to fetch page for {category_name}: {e}")
+        print("❌ JSON scrape failed:", e)
         return []
 
 
