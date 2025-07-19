@@ -211,12 +211,6 @@ def escape_markdown(text: str) -> str:
 
 
 def get_browser_type():
-    from playwright.async_api import async_playwright
     import os
+    return os.getenv("BROWSER", "chromium").lower()
 
-    browser_choice = os.getenv("BROWSER", "chromium").lower()
-    if browser_choice == "firefox":
-        return async_playwright().firefox
-    elif browser_choice == "webkit":
-        return async_playwright().webkit
-    return async_playwright().chromium
