@@ -66,54 +66,58 @@ async def async_extract_product_data(card):
 
 
 
+import random
 import asyncio
-from playwright.async_api import async_playwright
-from modules.utils import apply_affiliate_tag, shorten_url
+from modules.utils import async_extract_product_data
+from modules.scraper import get_browser_type
 
-
-async def scrape_category_products(category_name, category_url, max_results=15):
-    """
-    Leverage async_extract_product_data to grab bestseller cards from Amazon.
-    Works on GitHub Actions & headless runners.
-    """
-    results = []
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-        )
+async def scrape_top5_per_category(category, url):
+    try:
+        browser_type = get_browser_type()
+        browser = await browser_type.launch(headless=True)
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                       "AppleWebKit/537.36 (KHTML, like Gecko) "
-                       "Chrome/124.0 Safari/537.36",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+            java_script_enabled=True,
             viewport={"width": 1280, "height": 800}
         )
         page = await context.new_page()
 
-        try:
-            await page.goto(category_url, timeout=60000)
-            await page.keyboard.press("PageDown")
-            await page.wait_for_selector(
-                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout, .p13n-sc-uncoverable-faceout',
-                timeout=15000
-            )
+        await page.goto(url, timeout=60000)
+        await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
 
-            cards = await page.query_selector_all(
-                '[data-cy="asin-faceout-container"], .zg-grid-general-faceout, .p13n-sc-uncoverable-faceout'
-            )
+        cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
 
-            for card in cards[:max_results]:
-                product = await async_extract_product_data(card)
-                if product and product["title"] != "No title":
-                    results.append(product)
+        # Fallback if primary selector fails
+        if not cards or len(cards) < 5:
+            print(f"⚠️ Fallback selector used for: {category}")
+            cards = await page.query_selector_all('div.s-result-item[data-component-type="s-search-result"]')
 
-            await browser.close()
-            return results
-
-        except Exception as e:
-            print("❌ scrape_category_products:", e)
+        if not cards:
+            await page.screenshot(path=f"top5_error_{category.lower().replace(' ', '_')}.png")
+            print(f"⚠️ No product cards found for {category}")
             await browser.close()
             return []
+
+        # Deduplicate and shuffle
+        unique = []
+        seen_titles = set()
+        for card in cards:
+            data = await async_extract_product_data(card)
+            if data and data['title'] not in seen_titles:
+                unique.append(data)
+                seen_titles.add(data['title'])
+            if len(unique) >= 15:
+                break
+
+        await browser.close()
+
+        # Pick top 5 random from cleaned list
+        return random.sample(unique, k=min(5, len(unique)))
+
+    except Exception as e:
+        print(f"❌ Error scraping category {category}: {e}")
+        await page.screenshot(path=f"top5_error_{category.lower().replace(' ', '_')}_exception.png")
+        return []
 
 
 
