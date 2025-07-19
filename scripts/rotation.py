@@ -5,7 +5,7 @@ from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.templates import build_product_message
 from modules.telegram import send_photo, send as send_message, CHAT_ID
 from modules.scraper import (
-    scrape_category_products,
+    scrape_top5_per_category,
     scrape_product_of_the_day,
     scrape_budget_products
 )
@@ -29,7 +29,7 @@ from modules.utils import deduplicate_variants
 async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
     from modules.telegram import send as send_markdown  # ✅ use markdown now
-    from modules.scraper import scrape_category_products
+    from modules.scraper import scrape_top5_per_category
     from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
     import random
 
@@ -47,7 +47,7 @@ async def send_top5_per_category(fixed=False):
             break
 
         print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_category_products(category_name, category_url, max_results=15)
+        products = await scrape_top5_per_category(category_name, category_url, max_results=15)
 
         if not products:
             print(f"⚠️ No products found for {category_name}")
@@ -92,7 +92,7 @@ async def send_hidden_gem():
 # 💸 Budget Picks
 from modules.telegram import send as send_message
 from modules.categories import get_random_rotating_categories
-from modules.scraper import scrape_category_products
+from modules.scraper import scrape_top5_per_category
 import re
 
 def truncate_title(title, limit=60):
@@ -107,7 +107,7 @@ async def send_budget_picks():
 
     for category_name, category_url in selected_categories:
         print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_category_products(category_name, category_url, max_results=15)
+        products = await scrape_top5_per_category(category_name, category_url, max_results=15)
 
         valid_prices = 0
         budget_product = None
