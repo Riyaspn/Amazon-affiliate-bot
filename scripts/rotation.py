@@ -3,7 +3,6 @@ from datetime import datetime
 from modules.templates import format_top5_markdown
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.templates import build_product_message
-from modules.templates import build_category_header
 from modules.telegram import send_photo, send as send_message, CHAT_ID
 from modules.scraper import (
     scrape_category_products,
