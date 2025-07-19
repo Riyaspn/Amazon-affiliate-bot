@@ -101,7 +101,7 @@ async def async_extract_product_data(card):
 
 
 
-async def scrape_category_products(category_name, url, limit=15):
+async def scrape_category_products(category_name, category_url, max_results=15):
     print(f"🔍 Scraping Bestsellers: {category_name}")
     try:
         async with async_playwright() as p:
@@ -126,7 +126,7 @@ async def scrape_category_products(category_name, url, limit=15):
                     break
 
             await browser.close()
-            return results
+            return results[:max_results]
     except Exception as e:
         print(f"⚠️ Failed to fetch page for {category_name}")
         return []
