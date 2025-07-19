@@ -25,7 +25,7 @@ async def async_extract_product_data(card):
         link = await link_elem.get_attribute("href") if link_elem else ""
         raw_url = "https://www.amazon.in" + link
         affiliate_url = apply_affiliate_tag(raw_url)
-        short_url = await shorten_url(affiliate_url)
+        short_url = shorten_url(affiliate_url)
 
         # Image
         image_elem = await card.query_selector("img")
