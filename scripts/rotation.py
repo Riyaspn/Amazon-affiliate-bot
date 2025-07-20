@@ -11,7 +11,7 @@ from modules.prebuilt import get_prebuilt_links, get_hidden_gem, get_random_comb
 from modules.templates import (
     format_top5_markdown,
     format_budget_picks,
-    ormat_combo_deal_markdown,
+    format_combo_deal_markdown,
     format_product_of_the_day,
 )
 
