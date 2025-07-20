@@ -70,7 +70,7 @@ import random
 import asyncio
 from modules.utils import get_browser_type
 
-async def scrape_top5_per_category(category, url):
+async def scrape_top5_per_category(category_name, category_url, max_results=15):
     try:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(
@@ -109,7 +109,7 @@ async def scrape_top5_per_category(category, url):
             if data and data['title'] not in seen_titles:
                 unique.append(data)
                 seen_titles.add(data['title'])
-            if len(unique) >= 15:
+            if len(unique) >= max_results:
                 break
 
         await browser.close()
