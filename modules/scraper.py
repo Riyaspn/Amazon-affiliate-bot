@@ -4,7 +4,7 @@ import asyncio
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.utils import get_browser_type, get_browser_context, extract_price
+from modules.utils import get_browser_type, get_browser_context, convert_price_to_float
 
 async def async_extract_product_data(card):
     try:
@@ -100,8 +100,8 @@ async def scrape_product_of_the_day():
                 data = await async_extract_product_data(card)
                 if data and data["price"] and data["original_price"]:
                     try:
-                        price_val = extract_price(data["price"])
-                        original_price_val = extract_price(data["original_price"])
+                        price_val = convert_price_to_float(data["price"])
+                        original_price_val = convert_price_to_float(data["original_price"])
                         discount_pct = round((original_price_val - price_val) / original_price_val * 100)
                         if discount_pct >= 20:
                             data["discount"] = f"{discount_pct}% off"
@@ -109,7 +109,7 @@ async def scrape_product_of_the_day():
                     except:
                         pass
 
-            sorted_data = sorted(all_data, key=lambda d: extract_price(d["price"]))
+            sorted_data = sorted(all_data, key=lambda d: convert_price_to_float(d["price"]))
             return sorted_data[:1]
 
         except PlaywrightTimeoutError:
@@ -181,7 +181,7 @@ async def scrape_budget_products():
                     product = await async_extract_product_data(card)
                     if product and product["price"]:
                         try:
-                            price_val = extract_price(product["price"])
+                            price_val = convert_price_to_float(product["price"])
                             if price_val <= 999:
                                 results.append((label, product))
                                 break
