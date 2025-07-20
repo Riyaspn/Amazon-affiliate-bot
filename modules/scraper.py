@@ -124,7 +124,7 @@ from modules.utils import get_browser_type, get_browser_context
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 import random
 
-async def scrape_top5_per_category(fixed: bool = False):
+async def scrape_top5_per_category(fixed: bool = False, max_results: int = 5):
     all_results = []
 
     if fixed:
@@ -146,21 +146,23 @@ async def scrape_top5_per_category(fixed: bool = False):
                 seen = set()
                 data = []
 
-                for card in cards:
+                # Pull more than needed to ensure quality deduplication
+                for card in cards[:max_results * 2]:
                     product = await async_extract_product_data(card)
                     if product and product["title"] not in seen:
                         seen.add(product["title"])
                         data.append(product)
-                    if len(data) >= 5:
+                    if len(data) >= max_results:
                         break
 
                 all_results.append((label, data))
             except PlaywrightTimeoutError:
-                await page.screenshot(path=f"top5_error_{label}.png")
+                await page.screenshot(path=f"top5_error_{label.lower().replace(' ', '_')}.png")
             finally:
                 await browser.close()
 
     return all_results
+
 
 
 async def scrape_budget_products():
