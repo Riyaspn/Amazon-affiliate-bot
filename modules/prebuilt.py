@@ -85,3 +85,19 @@ BUDGET_PICK_CATEGORIES = {
     "🖊️ Stationery & Supplies": "https://www.amazon.in/s?k=stationery&rh=p_36%3A-99900",
     "🧴 Health & Wellness": "https://www.amazon.in/s?k=health&rh=p_36%3A-99900",
 }
+
+HIDDEN_GEM_CATEGORIES = [
+    {"label": "🧳 Travel Accessories", "url": "https://www.amazon.in/s?i=luggage&bbn=2454164031"},  # Subcategory for travel gadgets
+    {"label": "🎒 Backpacks & Trolleys", "url": "https://www.amazon.in/s?i=luggage&rh=n%3A2454163031"},  # Broader luggage
+    {"label": "🛫 Packing Organizers", "url": "https://www.amazon.in/s?i=luggage&bbn=2454167031"},
+    {"label": "😴 Travel Pillows & Comfort", "url": "https://www.amazon.in/s?i=luggage&bbn=2454168031"},
+    # Add more hidden gems below...
+    {"label": "🧸 Toys & Games", "url": "https://www.amazon.in/s?i=toys&rh=n%3A1350380031"},
+    {"label": "🐾 Pet Supplies", "url": "https://www.amazon.in/s?i=pets&rh=n%3A2454181031"},
+    {"label": "🎸 Musical Instruments", "url": "https://www.amazon.in/s?i=mi&rh=n%3A1377374031"},
+    {"label": "🛒 Gourmet Foods", "url": "https://www.amazon.in/s?i=grocery&rh=n%3A2454178031"},
+    {"label": "🔬 Industrial & Scientific", "url": "https://www.amazon.in/s?i=industrial&rh=n%3A976442031"},
+    {"label": "🪴 Garden & Outdoors", "url": "https://www.amazon.in/s?i=lawn-garden&rh=n%3A2454182031"},
+    {"label": "🚗 Car & Motorbike", "url": "https://www.amazon.in/s?i=automotive&rh=n%3A5257479031"},
+    {"label": "🎁 Quirky Gifts & Gadgets", "url": "https://www.amazon.in/s?i=toys&rh=n%3A1378569031"},
+]
