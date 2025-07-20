@@ -4,7 +4,7 @@ import asyncio
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.utils import get_browser_type, get_browser_context, convert_price_to_float
+from modules.utils import convert_price_to_float
 
 async def async_extract_product_data(card):
     try:
@@ -58,9 +58,9 @@ async def scrape_single_combo_product():
     label, url = combo['label'], combo['url']
 
     async with async_playwright() as p:
-        browser_type = get_browser_type()
+        browser_type = get_browser_type(playwright)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(browser)
+        context = await get_browser_context(playwright, browser_type)
         page = await context.new_page()
 
         try:
@@ -85,9 +85,9 @@ async def scrape_single_combo_product():
 async def scrape_product_of_the_day():
     url = "https://www.amazon.in/s?i=computers&rh=n%3A1377374031&fs=true"
     async with async_playwright() as p:
-        browser_type = get_browser_type()
+        browser_type = get_browser_type(playwright)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(browser)
+        context = await get_browser_context(playwright, browser_type)
         page = await context.new_page()
 
         try:
@@ -134,9 +134,9 @@ async def scrape_top5_per_category(fixed: bool = False, max_results: int = 5):
 
     for label, url in selected_categories.items():
         async with async_playwright() as p:
-            browser_type = get_browser_type()
+            browser_type = get_browser_type(playwright)
             browser = await p[browser_type].launch(headless=True)
-            context = await get_browser_context(browser)
+            context = await get_browser_context(playwright, browser_type)
             page = await context.new_page()
 
             try:
@@ -169,9 +169,9 @@ async def scrape_budget_products():
     results = []
     for label, url in TOP5_CATEGORIES.items():
         async with async_playwright() as p:
-            browser_type = get_browser_type()
+            browser_type = get_browser_type(playwright)
             browser = await p[browser_type].launch(headless=True)
-            context = await get_browser_context(browser)
+            context = await get_browser_context(playwright, browser_type)
             page = await context.new_page()
 
             try:
@@ -202,9 +202,9 @@ async def scrape_hidden_gem():
     label, url = category["label"], category["url"]
 
     async with async_playwright() as p:
-        browser_type = get_browser_type()
+        browser_type = get_browser_type(playwright)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(browser)
+        context = await get_browser_context(playwright, browser_type)
         page = await context.new_page()
 
         try:
