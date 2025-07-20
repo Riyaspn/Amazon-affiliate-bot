@@ -14,10 +14,63 @@ from modules.prebuilt import BUDGET_PICK_CATEGORIES
 
 # Shared product extraction function
 # scraper.py
+async def async_extract_product_data(card):
+    try:
+        title = await card.query_selector_eval('h2 span', 'el => el.innerText') if await card.query_selector('h2 span') else None
+        url_suffix = await card.query_selector_eval('h2 a', 'el => el.getAttribute("href")') if await card.query_selector('h2 a') else None
+        url = f"https://www.amazon.in{url_suffix.split('?')[0]}" if url_suffix else None
+
+        # Extract prices
+        original_price = None
+        current_price = None
+        discount = None
+
+        price_whole = await card.query_selector_eval('.a-price-whole', 'el => el.innerText') if await card.query_selector('.a-price-whole') else None
+        price_fraction = await card.query_selector_eval('.a-price-fraction', 'el => el.innerText') if await card.query_selector('.a-price-fraction') else "00"
+        current_price = f"{price_whole}.{price_fraction}" if price_whole else None
+
+        # Try to extract original price (MRP)
+        original_price_raw = await card.query_selector_eval('.a-price.a-text-price span', 'el => el.innerText') if await card.query_selector('.a-price.a-text-price span') else None
+        if original_price_raw:
+            original_price = original_price_raw.replace("₹", "").replace(",", "").strip()
+
+        # Calculate discount %
+        if original_price and current_price:
+            try:
+                original = float(original_price)
+                current = float(current_price.replace(",", ""))
+                discount = int(round(((original - current) / original) * 100))
+            except:
+                discount = None
+
+        # Extract normal offer (if present)
+        normal_offer = None
+        if await card.query_selector('.a-row.a-size-base.a-color-secondary span'):
+            normal_offer = await card.query_selector_eval('.a-row.a-size-base.a-color-secondary span', 'el => el.innerText')
+
+        # Extract bank offer (if present)
+        bank_offer = None
+        bank_offer_selector = 'span[class*="dealBadgeText"]'
+        if await card.query_selector(bank_offer_selector):
+            bank_offer = await card.query_selector_eval(bank_offer_selector, 'el => el.innerText')
+
+        return {
+            "title": title.strip() if title else None,
+            "url": url,
+            "price": f"₹{current_price}" if current_price else None,
+            "original_price": f"₹{original_price}" if original_price else None,
+            "discount": f"{discount}% OFF" if discount else None,
+            "normal_offer": normal_offer.strip() if normal_offer else None,
+            "bank_offer": bank_offer.strip() if bank_offer else None,
+        }
+
+    except Exception as e:
+        print(f"❌ Error extracting product data: {e}")
+        return None
+
 
 async def scrape_top5_per_category(category_name, category_url, max_results=15):
     from playwright.async_api import async_playwright
-    from modules.utils import async_extract_product_data
     from modules.utils import shorten_url, ensure_affiliate_tag
     from modules.browser import get_browser_type, USER_AGENT
 
@@ -36,7 +89,7 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
             )
             page = await context.new_page()
 
-            await page.goto(category_url, timeout=60000)
+            await page.goto(url, timeout=60000)
             await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=20000)
 
             cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
@@ -72,62 +125,6 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
 
 
 
-
-import random
-import asyncio
-from modules.utils import get_browser_type
-
-async def scrape_top5_per_category(category_name, category_url, max_results=15):
-    try:
-        browser_type = get_browser_type()
-        browser = await browser_type.launch(
-        headless=True,
-        args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-        )
-
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-            java_script_enabled=True,
-            viewport={"width": 1280, "height": 800}
-        )
-        page = await context.new_page()
-
-        await page.goto(url, timeout=60000)
-        await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
-
-        cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
-
-        # Fallback if primary selector fails
-        if not cards or len(cards) < 5:
-            print(f"⚠️ Fallback selector used for: {category_name}")
-            cards = await page.query_selector_all('div.s-result-item[data-component-type="s-search-result"]')
-
-        if not cards:
-            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
-            print(f"⚠️ No product cards found for {category_name}")
-            await browser.close()
-            return []
-
-        # Deduplicate and shuffle
-        unique = []
-        seen_titles = set()
-        for card in cards:
-            data = await async_extract_product_data(card)
-            if data and data['title'] not in seen_titles:
-                unique.append(data)
-                seen_titles.add(data['title'])
-            if len(unique) >= max_results:
-                break
-
-        await browser.close()
-
-        # Pick top 5 random from cleaned list
-        return random.sample(unique, k=min(5, len(unique)))
-
-    except Exception as e:
-        print(f"❌ Error scraping category_name {category_name}: {e}")
-        await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}_exception.png")
-        return []
 
 
 
@@ -214,7 +211,7 @@ async def scrape_budget_products():
 
         for label, url in selected:
             try:
-                await page.goto(category_url, timeout=60000)
+                await page.goto(url, timeout=60000)
                 await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
 
                 cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
