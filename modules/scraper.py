@@ -60,7 +60,7 @@ async def scrape_single_combo_product():
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(p, browser_type)
+        context = await get_browser_context(browser_type) 
         page = await context.new_page()
 
         try:
@@ -87,7 +87,7 @@ async def scrape_product_of_the_day():
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(p, browser_type)
+        context = await get_browser_context(browser_type) 
         page = await context.new_page()
 
         try:
@@ -136,7 +136,7 @@ async def scrape_top5_per_category(fixed: bool = False, max_results: int = 5):
         async with async_playwright() as p:
             browser_type = get_browser_type(p)
             browser = await browser_type.launch(headless=True)
-            context = await get_browser_context(p, browser_type)
+            context = await get_browser_context(browser_type) 
             page = await context.new_page()
 
             try:
@@ -171,7 +171,7 @@ async def scrape_budget_products():
         async with async_playwright() as p:
             browser_type = get_browser_type(p)
             browser = await browser_type.launch(headless=True)
-            context = await get_browser_context(p, browser_type)
+            context = await get_browser_context(browser_type) 
             page = await context.new_page()
 
             try:
@@ -204,7 +204,7 @@ async def scrape_hidden_gem():
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(p, browser_type)
+        context = await get_browser_context(browser_type) 
         page = await context.new_page()
 
         try:
