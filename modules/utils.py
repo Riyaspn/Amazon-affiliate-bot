@@ -57,10 +57,9 @@ def apply_affiliate_tag(link, tag=AFFILIATE_TAG):
 def format_price(raw):
     try:
         price = float(str(raw).replace("₹", "").replace(",", "").strip())
-        return f"₹{price:.2f}"
+        return f"₹{price:,.0f}"
     except:
-        return "₹0.00"
-
+        return "₹0"
 
 def add_label(product):
     labels = []
