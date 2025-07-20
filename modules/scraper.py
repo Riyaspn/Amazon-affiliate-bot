@@ -20,21 +20,17 @@ async def async_extract_product_data(card):
         url_suffix = await card.query_selector_eval('h2 a', 'el => el.getAttribute("href")') if await card.query_selector('h2 a') else None
         url = f"https://www.amazon.in{url_suffix.split('?')[0]}" if url_suffix else None
 
-        # Extract prices
-        original_price = None
-        current_price = None
-        discount = None
-
+        # Extract current price
         price_whole = await card.query_selector_eval('.a-price-whole', 'el => el.innerText') if await card.query_selector('.a-price-whole') else None
         price_fraction = await card.query_selector_eval('.a-price-fraction', 'el => el.innerText') if await card.query_selector('.a-price-fraction') else "00"
         current_price = f"{price_whole}.{price_fraction}" if price_whole else None
 
-        # Try to extract original price (MRP)
+        # Extract original price (MRP)
         original_price_raw = await card.query_selector_eval('.a-price.a-text-price span', 'el => el.innerText') if await card.query_selector('.a-price.a-text-price span') else None
-        if original_price_raw:
-            original_price = original_price_raw.replace("₹", "").replace(",", "").strip()
+        original_price = original_price_raw.replace("₹", "").replace(",", "").strip() if original_price_raw else None
 
-        # Calculate discount %
+        # Calculate discount
+        discount = None
         if original_price and current_price:
             try:
                 original = float(original_price)
@@ -43,12 +39,12 @@ async def async_extract_product_data(card):
             except:
                 discount = None
 
-        # Extract normal offer (if present)
+        # Extract normal offer text
         normal_offer = None
         if await card.query_selector('.a-row.a-size-base.a-color-secondary span'):
             normal_offer = await card.query_selector_eval('.a-row.a-size-base.a-color-secondary span', 'el => el.innerText')
 
-        # Extract bank offer (if present)
+        # Extract bank offer (e.g., SBI card deal)
         bank_offer = None
         bank_offer_selector = 'span[class*="dealBadgeText"]'
         if await card.query_selector(bank_offer_selector):
@@ -67,6 +63,7 @@ async def async_extract_product_data(card):
     except Exception as e:
         print(f"❌ Error extracting product data: {e}")
         return None
+
 
 
 async def scrape_top5_per_category(category_name, category_url, max_results=15):
