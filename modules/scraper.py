@@ -19,14 +19,14 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
     from playwright.async_api import async_playwright
     from modules.utils import async_extract_product_data
     from modules.utils import shorten_url, ensure_affiliate_tag
-    from modules.browser import get_browser_type, USER_AGENT  # Ensure this import matches your setup
+    from modules.browser import get_browser_type, USER_AGENT
 
     print(f"🔍 Scraping {category_name}: {category_url}")
-    page = None  # Define early so we can safely use in `except`
+    page = None  # Must define before try
 
     try:
         async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+            browser_type = get_browser_type(p)  # ✅ Fix here
             browser = await browser_type.launch(headless=True)
 
             context = await browser.new_context(
@@ -59,7 +59,7 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
                 results.append(data)
 
             await browser.close()
-            return results[:5]  # return top 5 after filtering
+            return results[:5]  # Return top 5 only
 
     except Exception as e:
         print(f"❌ Error scraping category_name {category_name}: {e}")
