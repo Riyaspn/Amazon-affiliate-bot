@@ -21,6 +21,8 @@ def simplify_title(title):
         "12gb", "8gb", "6gb", "4gb", "3gb", "2gb",
         "ram", "rom", "storage", "variant"
     ]
+    blacklist += ["buy now", "amazon exclusive", "limited edition", "deal", "offer"]
+
     for word in blacklist:
         title = title.replace(word, '')
 
@@ -62,26 +64,25 @@ def format_price(raw):
 
 def add_label(product):
     labels = []
-    price_text = product['price'].replace("₹", "").replace(",", "").strip()
     try:
-        price = float(price_text)
+        price = float(product['price'].replace("₹", "").replace(",", "").strip())
         if price > 10000:
             labels.append("💸 Premium Pick")
     except:
         pass
 
-    if product['rating'] != "N/A":
-        try:
-            rating = float(product['rating'].split()[0])
-            if rating >= 4.5:
-                labels.append("🌟 Top Rated")
-        except:
-            pass
+    try:
+        rating = float(product['rating'].split()[0])
+        if rating >= 4.5:
+            labels.append("🌟 Top Rated")
+    except:
+        pass
 
-    if "off" in product['price'].lower():
-        labels.append("🎯 Best Value")
+    if product.get("discount", "").endswith("% off"):
+        labels.append("🔥 Hot Deal")
 
-    return labels[0] if labels else "⭐ Top Rated"
+    return labels[0] if labels else "⭐ Recommended"
+
 
 
 def get_day():
@@ -132,10 +133,6 @@ async def get_soup_from_url(url: str):
 
 
 def shorten_url(url):
-    """
-    Simulates a shortened version of the affiliate URL for Telegram (Amazon-style clean URL with tag).
-    Keeps only the product path and appends the tag.
-    """
     try:
         parsed = urlparse(url)
         path = parsed.path
@@ -144,6 +141,7 @@ def shorten_url(url):
     except Exception as e:
         print(f"Error in shorten_url: {e}")
         return url
+
 
 
 
@@ -216,5 +214,17 @@ def get_browser_type(playwright):
         return playwright.chromium
     return playwright.firefox
 
+
+
+def format_markdown_price_info(product):
+    price = escape_markdown(product.get("price", "₹0"))
+    discount = escape_markdown(product.get("discount", ""))
+    offer = escape_markdown(product.get("bank_offer", ""))
+    result = f"{price}"
+    if discount:
+        result += f" | {discount}"
+    if offer:
+        result += f" | {offer}"
+    return result
 
 
