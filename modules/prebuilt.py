@@ -50,15 +50,29 @@ def get_flash_deal_links():
     ]
 
 # 💎 Hidden Gem logic — select 1 unused prebuilt link
+from datetime import datetime
+import random
+from modules.utils import AFFILIATE_TAG
+
+HIDDEN_GEM_LABELS = ["💎 Hidden Gem", "🆕 Niche Find", "💡 Smart Buy"]
+
 def get_hidden_gem():
-    today_used = {PREBUILT_LINKS[(datetime.now().toordinal() + i) % len(PREBUILT_LINKS)][0] for i in range(3)}
-    remaining = [item for item in PREBUILT_LINKS if item[0] not in today_used]
+    # Rotate through categories without immediate repeat
+    today = datetime.now().toordinal()
+    offset = today % len(HIDDEN_GEM_CATEGORIES)
 
-    if not remaining:
-        return None
+    # Pick category based on rotating index
+    selected = HIDDEN_GEM_CATEGORIES[offset]
 
-    cat, url = random.choice(remaining)
-    return {"category": cat, "url": f"{url}&tag={AFFILIATE_TAG}"}
+    # Randomly rotate label
+    label = random.choice(HIDDEN_GEM_LABELS)
+
+    return {
+        "label": label,
+        "category": selected["label"],
+        "url": f"{selected['url']}&tag={AFFILIATE_TAG}"
+    }
+
 
 # 🎯 Combo Deal Categories (easily editable)
 COMBO_DEAL_CATEGORIES = {
