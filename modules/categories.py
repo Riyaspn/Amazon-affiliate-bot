@@ -26,20 +26,7 @@ ROTATING_CATEGORIES = {
     "Kitchen Tools": "https://www.amazon.in/gp/bestsellers/kitchen/1380442031/",
 }
 
-# modules/categories.py
 
-
-# Less-used categories for 💎 Hidden Gem
-HIDDEN_GEM_CATEGORIES = [
-    "Toys & Games",
-    "Pet Supplies",
-    "Musical Instruments",
-    "Grocery & Gourmet Foods",
-    "Industrial & Scientific",
-    "Garden & Outdoors",
-    "Car & Motorbike",
-    "Software"
-]
 
 def get_hidden_gem_category(day=None):
     """Return a deterministic hidden gem category based on day, or random one."""
