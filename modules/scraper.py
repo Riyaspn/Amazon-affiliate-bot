@@ -58,9 +58,9 @@ async def scrape_single_combo_product():
     label, url = combo['label'], combo['url']
 
     async with async_playwright() as p:
-        browser_type = get_browser_type(playwright)
+        browser_type = get_browser_type(p)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(playwright, browser_type)
+        context = await get_browser_context(p, browser_type)
         page = await context.new_page()
 
         try:
@@ -85,9 +85,9 @@ async def scrape_single_combo_product():
 async def scrape_product_of_the_day():
     url = "https://www.amazon.in/s?i=computers&rh=n%3A1377374031&fs=true"
     async with async_playwright() as p:
-        browser_type = get_browser_type(playwright)
+        browser_type = get_browser_type(p)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(playwright, browser_type)
+        context = await get_browser_context(p, browser_type)
         page = await context.new_page()
 
         try:
@@ -134,9 +134,9 @@ async def scrape_top5_per_category(fixed: bool = False, max_results: int = 5):
 
     for label, url in selected_categories.items():
         async with async_playwright() as p:
-            browser_type = get_browser_type(playwright)
+            browser_type = get_browser_type(p)
             browser = await p[browser_type].launch(headless=True)
-            context = await get_browser_context(playwright, browser_type)
+            context = await get_browser_context(p, browser_type)
             page = await context.new_page()
 
             try:
@@ -169,9 +169,9 @@ async def scrape_budget_products():
     results = []
     for label, url in TOP5_CATEGORIES.items():
         async with async_playwright() as p:
-            browser_type = get_browser_type(playwright)
+            browser_type = get_browser_type(p)
             browser = await p[browser_type].launch(headless=True)
-            context = await get_browser_context(playwright, browser_type)
+            context = await get_browser_context(p, browser_type)
             page = await context.new_page()
 
             try:
@@ -202,9 +202,9 @@ async def scrape_hidden_gem():
     label, url = category["label"], category["url"]
 
     async with async_playwright() as p:
-        browser_type = get_browser_type(playwright)
+        browser_type = get_browser_type(p)
         browser = await p[browser_type].launch(headless=True)
-        context = await get_browser_context(playwright, browser_type)
+        context = await get_browser_context(p, browser_type)
         page = await context.new_page()
 
         try:
