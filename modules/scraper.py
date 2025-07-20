@@ -72,7 +72,7 @@ from modules.utils import get_browser_type
 
 async def scrape_top5_per_category(category_name, category_url, max_results=15):
     try:
-        browser_type = get_browser_type(p)
+        browser_type = get_browser_type()
         browser = await browser_type.launch(
         headless=True,
         args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
@@ -92,12 +92,12 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
 
         # Fallback if primary selector fails
         if not cards or len(cards) < 5:
-            print(f"⚠️ Fallback selector used for: {category}")
+            print(f"⚠️ Fallback selector used for: {category_name}")
             cards = await page.query_selector_all('div.s-result-item[data-component-type="s-search-result"]')
 
         if not cards:
-            await page.screenshot(path=f"top5_error_{category.lower().replace(' ', '_')}.png")
-            print(f"⚠️ No product cards found for {category}")
+            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
+            print(f"⚠️ No product cards found for {category_name}")
             await browser.close()
             return []
 
@@ -118,8 +118,8 @@ async def scrape_top5_per_category(category_name, category_url, max_results=15):
         return random.sample(unique, k=min(5, len(unique)))
 
     except Exception as e:
-        print(f"❌ Error scraping category {category}: {e}")
-        await page.screenshot(path=f"top5_error_{category.lower().replace(' ', '_')}_exception.png")
+        print(f"❌ Error scraping category_name {category_name}: {e}")
+        await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}_exception.png")
         return []
 
 
