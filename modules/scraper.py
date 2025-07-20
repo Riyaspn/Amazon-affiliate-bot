@@ -13,54 +13,54 @@ from modules.utils import (
 from modules.prebuilt import BUDGET_PICK_CATEGORIES
 
 # Shared product extraction function
-async def async_extract_product_data(card):
+async def scrape_top5_per_category(category_name, category_url, max_results=15):
     try:
-        # ==== TITLE ====
-        title_elem = await card.query_selector(
-            'span[data-cy="title-recipe-title"], h2 a span, .p13n-sc-truncate-desktop-type2'
+        browser_type = get_browser_type()  # ✅ FIXED: removed p
+        browser = await browser_type.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
         )
-        title = (await title_elem.inner_text()).strip() if title_elem else "No title"
 
-        # ==== URL ====
-        link_elem = await card.query_selector('h2 a, .a-link-normal')
-        link = await link_elem.get_attribute("href") if link_elem else ""
-        raw_url = "https://www.amazon.in" + link
-        affiliate_url = apply_affiliate_tag(raw_url)
-        short_url = shorten_url(affiliate_url)
-
-        # ==== IMAGE ====
-        img_elem = await card.query_selector('img[src*=".jpg"], img[src*=".png"]')
-        image = await img_elem.get_attribute("src") if img_elem else ""
-
-        # ==== PRICE ====
-        price_elem = await card.query_selector(
-            'span.a-price .a-offscreen, span.a-price-whole'
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+            java_script_enabled=True,
+            viewport={"width": 1280, "height": 800}
         )
-        price_str = await price_elem.inner_text() if price_elem else None
+        page = await context.new_page()
 
-        # ==== ORIGINAL / MRP ====
-        mrp_elem = await card.query_selector(
-            'span.a-price.a-text-price .a-offscreen'
-        )
-        mrp_str = await mrp_elem.inner_text() if mrp_elem else None
+        await page.goto(category_url, timeout=60000)  # ✅ Make sure `category_url` is used
+        await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
 
-        # ==== RATING ====
-        rating_elem = await card.query_selector('span.a-icon-alt')
-        rating = await rating_elem.inner_text() if rating_elem else "N/A"
+        cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
+        if not cards or len(cards) < 5:
+            print(f"⚠️ Fallback selector used for: {category_name}")
+            cards = await page.query_selector_all('div.s-result-item[data-component-type="s-search-result"]')
 
-        return {
-            "title": title,
-            "url": affiliate_url,
-            "short_url": short_url,
-            "price": format_price(price_str),
-            "original_price": format_price(mrp_str) if mrp_str else None,
-            "discount": None,  # calculate later if needed
-            "rating": rating,
-            "image": image,
-        }
+        if not cards:
+            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
+            print(f"⚠️ No product cards found for {category_name}")
+            await browser.close()
+            return []
+
+        # Deduplicate
+        unique = []
+        seen_titles = set()
+        for card in cards:
+            data = await async_extract_product_data(card)
+            if data and data['title'] not in seen_titles:
+                unique.append(data)
+                seen_titles.add(data['title'])
+            if len(unique) >= max_results:
+                break
+
+        await browser.close()
+        return random.sample(unique, k=min(5, len(unique)))
+
     except Exception as e:
-        print("🔍 Extract error:", e)
-        return None
+        print(f"❌ Error scraping category {category_name}: {e}")  # ✅ FIXED
+        await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}_exception.png")
+        return []
+
 
 
 
