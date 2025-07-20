@@ -28,7 +28,7 @@ async def send_top5_per_category(fixed=False):
     from modules.telegram import send as send_markdown  # ✅ Markdown formatting
     from modules.scraper import scrape_top5_per_category
     from modules.templates import format_top5_markdown
-    from modules.telegram import send_message
+    from modules.telegram import send as send_message
 
     await send_message("🛒 *Top 5 Per Category*", parse_mode="Markdown")
 
