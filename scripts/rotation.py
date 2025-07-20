@@ -87,9 +87,9 @@ async def send_top5_per_category(fixed=False):
 # 💎 Hidden Gem
 async def send_hidden_gem():
     gem = get_hidden_gem()
-    if gem:
-        message = f"💎 *HIDDEN GEM:*\n\n*{gem['category']}*\n🔗 [View on Amazon]({gem['url']})"
-        await send_message(message)
+    caption = f"{gem['label']} – *{gem['category']}*\n[Explore on Amazon]({gem['url']})"
+    await send_markdown_message(caption)
+
 
 
 
