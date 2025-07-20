@@ -2,7 +2,8 @@ import random
 import re
 import asyncio
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES, TOP5_CATEGORIES
+from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES
+from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.utils import get_browser_type, get_browser_context, extract_price
 
 async def async_extract_product_data(card):
@@ -118,9 +119,20 @@ async def scrape_product_of_the_day():
 
     return []
 
-async def scrape_top5_per_category():
+from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
+from modules.utils import async_extract_product_data, get_browser_type, get_browser_context
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+import random
+
+async def scrape_top5_per_category(fixed: bool = False):
     all_results = []
-    for label, url in TOP5_CATEGORIES.items():
+
+    if fixed:
+        selected_categories = FIXED_CATEGORIES
+    else:
+        selected_categories = dict(random.sample(ROTATING_CATEGORIES.items(), 3))
+
+    for label, url in selected_categories.items():
         async with async_playwright() as p:
             browser_type = get_browser_type()
             browser = await p[browser_type].launch(headless=True)
@@ -149,6 +161,7 @@ async def scrape_top5_per_category():
                 await browser.close()
 
     return all_results
+
 
 async def scrape_budget_products():
     results = []
