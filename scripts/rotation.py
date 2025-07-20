@@ -1,8 +1,6 @@
 import random
 from datetime import datetime
-from modules.templates import format_top5_markdown
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.templates import build_product_message
 from modules.telegram import send_photo, send as send_message, CHAT_ID
 from modules.scraper import (
     scrape_top5_per_category,
@@ -10,6 +8,13 @@ from modules.scraper import (
     scrape_budget_products
 )
 from modules.prebuilt import get_prebuilt_links, get_hidden_gem, get_random_combo_category
+from modules.templates import (
+    format_top5_product,
+    format_budget_pick_product,
+    format_combo_deal,
+    format_product_of_the_day,
+)
+
 
 
 def get_day():
