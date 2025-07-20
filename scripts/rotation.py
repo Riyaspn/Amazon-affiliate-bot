@@ -23,41 +23,22 @@ def get_day():
 
 # 🛒 Top 5 Per Category
 
-from modules.utils import deduplicate_variants
-
-
-
-# rotation.py
-
-
-
 async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
-    from modules.telegram import send as send_markdown  # ✅ use markdown now
+    from modules.telegram import send as send_markdown  # ✅ Markdown formatting
     from modules.scraper import scrape_top5_per_category
-    from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-    import random
-
-    if fixed:
-        selected_categories = list(FIXED_CATEGORIES.items())[:3]
-    else:
-        selected_categories = random.sample(list(ROTATING_CATEGORIES.items()), 5)
+    from modules.templates import format_top5_markdown
+    from modules.telegram import send_message
 
     await send_message("🛒 *Top 5 Per Category*", parse_mode="Markdown")
-  # ✅ Markdown formatting
 
-    count = 0
-    for category_name, category_url in selected_categories:
-        if count >= 3:
-            break
+    results = await scrape_top5_per_category(fixed=fixed, max_results=15)
 
-        print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_top5_per_category(category_name, category_url, max_results=15)
+    if not results:
+        await send_message("⚠️ No top products found for any category.")
+        return
 
-        if not products:
-            print(f"⚠️ No products found for {category_name}")
-            continue
-
+    for category_name, products in results:
         deduped = deduplicate_variants(products)
         top5 = deduped[:5]
 
@@ -65,12 +46,9 @@ async def send_top5_per_category(fixed=False):
             print(f"⚠️ No deduplicated products in {category_name}")
             continue
 
-        message = format_top5_markdown(top5, category_name) # ✅ Updated function
-        await send_message(message)  # ✅ Updated send function
-        count += 1
+        message = format_top5_markdown(top5, category_name)
+        await send_message(message, parse_mode="Markdown")
 
-    if count == 0:
-        await send_message("⚠️ No top products found for any category.")
 
 
 
