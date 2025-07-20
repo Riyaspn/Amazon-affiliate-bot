@@ -290,9 +290,9 @@ async def run_morning_rotation(current_day=None):
 # 🌆 Evening Rotation
 async def run_evening_rotation(current_day=None):
     day = current_day if current_day else get_day()
-    if day in ["Monday", "Wednesday", "Friday"]:
+    if day in ["Monday", "Friday"]:
        await send_top5_per_category(fixed=True)
-    elif day == "Sunday":
+    elif day in ["Wednesday", "Sunday"]:
        await send_top5_per_category(fixed=False)  
     if day in ["Tuesday", "Thursday", "Saturday"]:
         await send_flash_deals()
