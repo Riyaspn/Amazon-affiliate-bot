@@ -13,53 +13,60 @@ from modules.utils import (
 from modules.prebuilt import BUDGET_PICK_CATEGORIES
 
 # Shared product extraction function
+# scraper.py
+
 async def scrape_top5_per_category(category_name, category_url, max_results=15):
+    from playwright.async_api import async_playwright
+    from modules.utils import async_extract_product_data
+    from modules.utils import shorten_url, ensure_affiliate_tag
+    from modules.browser import get_browser_type, USER_AGENT  # Ensure this import matches your setup
+
+    print(f"🔍 Scraping {category_name}: {category_url}")
+    page = None  # Define early so we can safely use in `except`
+
     try:
-        browser_type = get_browser_type()  # ✅ FIXED: removed p
-        browser = await browser_type.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
-        )
+        async with async_playwright() as p:
+            browser_type = get_browser_type(p)
+            browser = await browser_type.launch(headless=True)
 
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-            java_script_enabled=True,
-            viewport={"width": 1280, "height": 800}
-        )
-        page = await context.new_page()
+            context = await browser.new_context(
+                java_script_enabled=True,
+                user_agent=USER_AGENT,
+                viewport={"width": 1280, "height": 800}
+            )
+            page = await context.new_page()
 
-        await page.goto(category_url, timeout=60000)  # ✅ Make sure `category_url` is used
-        await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=15000)
+            await page.goto(category_url, timeout=60000)
+            await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=20000)
 
-        cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
-        if not cards or len(cards) < 5:
-            print(f"⚠️ Fallback selector used for: {category_name}")
-            cards = await page.query_selector_all('div.s-result-item[data-component-type="s-search-result"]')
+            cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
 
-        if not cards:
-            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
-            print(f"⚠️ No product cards found for {category_name}")
+            print(f"🔎 Found {len(cards)} products under {category_name}")
+            results = []
+            seen_titles = set()
+
+            for card in cards:
+                if len(results) >= max_results:
+                    break
+
+                data = await async_extract_product_data(card)
+                if not data or data["title"] in seen_titles:
+                    continue
+
+                seen_titles.add(data["title"])
+                data["url"] = ensure_affiliate_tag(data["url"])
+                data["short_url"] = await shorten_url(data["url"])
+                results.append(data)
+
             await browser.close()
-            return []
-
-        # Deduplicate
-        unique = []
-        seen_titles = set()
-        for card in cards:
-            data = await async_extract_product_data(card)
-            if data and data['title'] not in seen_titles:
-                unique.append(data)
-                seen_titles.add(data['title'])
-            if len(unique) >= max_results:
-                break
-
-        await browser.close()
-        return random.sample(unique, k=min(5, len(unique)))
+            return results[:5]  # return top 5 after filtering
 
     except Exception as e:
-        print(f"❌ Error scraping category {category_name}: {e}")  # ✅ FIXED
-        await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}_exception.png")
+        print(f"❌ Error scraping category_name {category_name}: {e}")
+        if page:
+            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}_exception.png")
         return []
+
 
 
 
