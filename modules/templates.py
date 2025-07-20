@@ -9,18 +9,13 @@ def format_top5_markdown(products, category):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p.get('bank_offer') or "")
+        bank_offer = escape_markdown(product.get('bank_offer') or "")
         normal_offer = escape_markdown(p.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
-        if discount:
-            line += f"💰 *{discount}*"
-        if mrp:
-            line += f", MRP ~~₹{mrp}~~"
-        if price:
-            line += f", Now at ₹{price}"
-        line += "\n"
+        line += format_price_block(price, mrp, discount)
+
         if bank_offer:
             line += f"💳 *{bank_offer}*\n"
         if normal_offer:
@@ -37,18 +32,13 @@ def format_budget_picks(products):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p.get('bank_offer') or "")
+        bank_offer = escape_markdown(product.get('bank_offer') or "")
         normal_offer = escape_markdown(p.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
-        if discount:
-            line += f"💰 *{discount}*"
-        if mrp:
-            line += f", MRP ~~₹{mrp}~~"
-        if price:
-            line += f", Now at ₹{price}"
-        line += "\n"
+        line += format_price_block(price, mrp, discount)
+
         if bank_offer:
             line += f"💳 *{bank_offer}*\n"
         if normal_offer:
@@ -60,48 +50,38 @@ def format_budget_picks(products):
 def build_product_message(product, label_emoji="⭐"):
     title = escape_markdown(product["title"])
     url = escape_markdown(product["url"])
-    price = escape_markdown(product["price"])
-    mrp = escape_markdown(product["mrp"])
-    discount = escape_markdown(product["discount"])
-    bank_offer = escape_markdown(p.get('bank_offer') or "")
-    normal_offer = escape_markdown(p.get('normal_offer') or "")
+    price = escape_markdown(product.get("price", ""))
+    mrp = escape_markdown(product.get("original_price") or product.get("mrp", ""))
+    discount = escape_markdown(product.get("discount", ""))
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
 
     message = f"{label_emoji} *[{title}]({url})*\n\n"
-    if discount:
-        message += f"💰 *{discount}*"
-    if mrp:
-        message += f", MRP ~~₹{mrp}~~"
-    if price:
-        message += f", Now at ₹{price}"
-    message += "\n"
+    message += format_price_block(price, mrp, discount) + "\n"
     if bank_offer:
         message += f"💳 *{bank_offer}*\n"
     if normal_offer:
         message += f"💥 *{normal_offer}*\n"
     return message.strip()
+
 
 def build_photo_caption(product, label_emoji="🛍️"):
     title = escape_markdown(product["title"])
     url = escape_markdown(product["url"])
-    price = escape_markdown(product["price"])
-    mrp = escape_markdown(product["mrp"])
-    discount = escape_markdown(product["discount"])
-    bank_offer = escape_markdown(p.get('bank_offer') or "")
-    normal_offer = escape_markdown(p.get('normal_offer') or "")
+    price = escape_markdown(product.get("price", ""))
+    mrp = escape_markdown(product.get("original_price") or product.get("mrp", ""))
+    discount = escape_markdown(product.get("discount", ""))
+    bank_offer = escape_markdown(product.get("bank_offer", ""))
+    normal_offer = escape_markdown(product.get("normal_offer", ""))
 
     message = f"{label_emoji} *[{title}]({url})*\n\n"
-    if discount:
-        message += f"💰 *{discount}*"
-    if mrp:
-        message += f", MRP ~~₹{mrp}~~"
-    if price:
-        message += f", Now at ₹{price}"
-    message += "\n"
+    message += format_price_block(price, mrp, discount) + "\n"
     if bank_offer:
         message += f"💳 *{bank_offer}*\n"
     if normal_offer:
         message += f"💥 *{normal_offer}*\n"
     return message.strip()
+
 
 def format_combo_deal_markdown(product, label_text):
     return build_photo_caption(product, label_text)
@@ -117,18 +97,13 @@ def format_hidden_gems(products):
         price = escape_markdown(p['price'])
         mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
         discount = escape_markdown(p['discount'])
-        bank_offer = escape_markdown(p.get('bank_offer') or "")
-        normal_offer = escape_markdown(p.get('normal_offer') or "")
+        bank_offer = escape_markdown(product.get('bank_offer') or "")
+        normal_offer = escape_markdown(product.get('normal_offer') or "")
         label = p.get('label', '')
 
         line = f"{i}. {label} [{title}]({url})\n"
-        if discount:
-            line += f"💰 *{discount}*"
-        if mrp:
-            line += f", MRP ~~₹{mrp}~~"
-        if price:
-            line += f", Now at ₹{price}"
-        line += "\n"
+        line += format_price_block(price, mrp, discount)
+
         if bank_offer:
             line += f"💳 *{bank_offer}*\n"
         if normal_offer:
@@ -165,4 +140,18 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption
+
+
+def format_price_block(price, mrp, discount):
+    block = ""
+    if discount:
+        block += f"💰 *{discount}*"
+    if mrp:
+        block += f", MRP ~~₹{mrp}~~"
+    if price:
+        block += f", Now at ₹{price}"
+    return block
+
+
+
 
