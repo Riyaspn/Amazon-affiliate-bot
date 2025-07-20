@@ -120,7 +120,7 @@ async def scrape_product_of_the_day():
     return []
 
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.utils import async_extract_product_data, get_browser_type, get_browser_context
+from modules.utils import get_browser_type, get_browser_context
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 import random
 
