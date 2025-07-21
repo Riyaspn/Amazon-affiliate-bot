@@ -125,7 +125,7 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 import random
 
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from modules.utils import async_extract_product_data, ensure_affiliate_tag, shorten_url
+from modules.utils import ensure_affiliate_tag, shorten_url
 from modules.utils import get_browser_type, USER_AGENT
 from modules.utils import deduplicate_variants
 
