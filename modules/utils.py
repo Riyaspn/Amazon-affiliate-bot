@@ -5,6 +5,11 @@ from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 from datetime import datetime
 
 AFFILIATE_TAG = "storesofriyas-21"
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/119.0.0.0 Safari/537.36"
+)
 
 import re
 
@@ -193,7 +198,7 @@ async def get_browser_context(browser_type):
     context = await browser.new_context(
         viewport={"width": 1280, "height": 800},
         java_script_enabled=True,
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+        user_agent=USER_AGENT
     )
     return browser, context
 
