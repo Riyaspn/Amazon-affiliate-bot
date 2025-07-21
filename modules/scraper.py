@@ -124,44 +124,65 @@ from modules.utils import get_browser_type, get_browser_context
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 import random
 
-async def scrape_top5_per_category(fixed: bool = False, max_results: int = 5):
-    all_results = []
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from modules.utils import async_extract_product_data, ensure_affiliate_tag, shorten_url
+from modules.browser import get_browser_type, USER_AGENT
+from modules.utils import deduplicate_variants
 
-    if fixed:
-        selected_categories = FIXED_CATEGORIES
-    else:
-        selected_categories = dict(random.sample(ROTATING_CATEGORIES.items(), 3))
+async def scrape_top5_per_category(category_name, category_url, max_results=15):
+    print(f"🔍 Scraping {category_name}: {category_url}")
+    page = None
 
-    for label, url in selected_categories.items():
-        async with async_playwright() as p:
-            browser_type = get_browser_type(p)
+    try:
+        async with async_playwright() as playwright:
+            # 1) pick the right browser engine
+            browser_type = get_browser_type(playwright)
+
+            # 2) spin up the browser
             browser = await browser_type.launch(headless=True)
-            context = await get_browser_context(browser_type) 
+
+            # 3) create a new context + page
+            #    – or you can use your helper, but you must unpack
+            # browser, context = await get_browser_context(browser_type)
+            context = await browser.new_context(
+                java_script_enabled=True,
+                user_agent=USER_AGENT,
+                viewport={"width": 1280, "height": 800}
+            )
             page = await context.new_page()
 
-            try:
-                await page.goto(url, timeout=60000)
-                await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=30000)
-                cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
-                seen = set()
-                data = []
+            # 4) navigate & scrape
+            await page.goto(category_url, timeout=60000)
+            await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=20000)
+            cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
 
-                # Pull more than needed to ensure quality deduplication
-                for card in cards[:max_results * 2]:
-                    product = await async_extract_product_data(card)
-                    if product and product["title"] not in seen:
-                        seen.add(product["title"])
-                        data.append(product)
-                    if len(data) >= max_results:
-                        break
+            print(f"🔎 Found {len(cards)} products under {category_name}")
+            results, seen_titles = [], set()
 
-                all_results.append((label, data))
-            except PlaywrightTimeoutError:
-                await page.screenshot(path=f"top5_error_{label.lower().replace(' ', '_')}.png")
-            finally:
-                await browser.close()
+            for card in cards:
+                if len(results) >= max_results:
+                    break
 
-    return all_results
+                data = await async_extract_product_data(card)
+                if not data or data["title"] in seen_titles:
+                    continue
+
+                seen_titles.add(data["title"])
+                # apply affiliate tag & shorten
+                data["url"] = ensure_affiliate_tag(data["url"])
+                data["short_url"] = await shorten_url(data["url"])
+                results.append(data)
+
+            await browser.close()
+            # return only the top 5
+            return results[:5]
+
+    except Exception as e:
+        print(f"❌ Error scraping {category_name}: {e}")
+        if page:
+            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
+        return []
+
 
 
 
