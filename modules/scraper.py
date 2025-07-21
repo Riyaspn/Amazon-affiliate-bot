@@ -129,7 +129,7 @@ from modules.utils import ensure_affiliate_tag, shorten_url
 from modules.utils import get_browser_type, USER_AGENT
 from modules.utils import deduplicate_variants
 
-async def scrape_top5_per_category(category_name, category_url, max_results=15):
+async def scrape_top5_per_category(category_name, category_url, fixed=False, max_results=15):
     print(f"🔍 Scraping {category_name}: {category_url}")
     page = None
 
