@@ -29,16 +29,27 @@ async def send_top5_per_category(fixed=False):
     from modules.scraper import scrape_top5_per_category
     from modules.templates import format_top5_markdown
     from modules.telegram import send as send_message
+    from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
     await send_message("🛒 *Top 5 Per Category*", parse_mode="Markdown")
 
-    results = await scrape_top5_per_category(fixed=fixed, max_results=15)
+    if fixed:
+        categories = FIXED_CATEGORIES.items()
+    else:
+        categories = get_random_rotating_categories(n=3)
 
-    if not results:
-        await send_message("⚠️ No top products found for any category.")
-        return
+    for category_name, category_url in categories:
+        products = await scrape_top5_per_category(
+            category_name=category_name,
+            category_url=category_url,
+            fixed=fixed,
+            max_results=15
+        )
 
-    for category_name, products in results:
+        if not products:
+            print(f"⚠️ No products found in {category_name}")
+            continue
+
         deduped = deduplicate_variants(products)
         top5 = deduped[:5]
 
