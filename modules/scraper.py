@@ -153,8 +153,8 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
 
             # 4) navigate & scrape
             await page.goto(category_url, timeout=60000)
-            await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=20000)
-            cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
+            await page.wait_for_selector("div.zg-grid-general-faceout", timeout=30000)
+            cards = await page.query_selector_all("div.zg-grid-general-faceout")
 
             print(f"🔎 Found {len(cards)} products under {category_name}")
             results, seen_titles = [], set()
