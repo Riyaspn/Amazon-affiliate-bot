@@ -136,21 +136,15 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
 
     try:
         async with async_playwright() as playwright:
-            # 1) Pick the right browser engine
             browser_type = get_browser_type(playwright)
-
-            # 2) Launch browser
             browser = await browser_type.launch(headless=True)
 
-            # 3) Create context + page
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent=USER_AGENT,
                 viewport={"width": 1280, "height": 800}
             )
             page = await context.new_page()
-
-            # 4) Navigate and scrape
             await page.goto(category_url, timeout=60000)
             await page.wait_for_selector("div.zg-grid-general-faceout", timeout=30000)
             cards = await page.query_selector_all("div.zg-grid-general-faceout")
@@ -163,13 +157,28 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                     break
 
                 data = await async_extract_product_data(card)
-                if not data or data["title"] in seen_titles:
+                if not data:
                     continue
 
-                seen_titles.add(data["title"])
-                data["url"] = ensure_affiliate_tag(data["url"])
-                data["short_url"] = await shorten_url(data["url"])
-                results.append(data)
+                title = data.get("title")
+                url = data.get("url")
+
+                if not isinstance(title, str) or not isinstance(url, str):
+                    print(f"⚠️ Skipping invalid product data: {data}")
+                    continue
+
+                if title in seen_titles:
+                    continue
+
+                seen_titles.add(title)
+
+                try:
+                    data["url"] = ensure_affiliate_tag(url)
+                    data["short_url"] = await shorten_url(data["url"])
+                    results.append(data)
+                except Exception as url_err:
+                    print(f"⚠️ Skipping due to URL error: {url_err}")
+                    continue
 
             return results[:5]
 
