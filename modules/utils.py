@@ -210,12 +210,12 @@ async def get_browser_context(browser_type):
 
 import re
 
-def escape_markdown(text):
+def escape_markdown(text: str) -> str:
     if not text:
         return ""
-    text = text.replace('\\', '\\\\')  # Escape backslashes first
-    escape_chars = r"_*[]()~`>#+-=|{}.!"
+    escape_chars = r"_*[]()~`>#+-=|{}.!\\"
     return ''.join(['\\' + c if c in escape_chars else c for c in text])
+
 
 
 
