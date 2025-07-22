@@ -11,74 +11,72 @@ from urllib.parse import urlparse, parse_qs, unquote
 from modules.utils import add_label
 from modules.utils import shorten_url, ensure_affiliate_tag, convert_price_to_float
 
-async def async_extract_product_data(card):
+async def extract_product_data(card, context, category_name):
     try:
-        title_element = await card.query_selector('h2 a span')
+        # Product link
+        link_element = await card.query_selector("a.a-link-normal.aok-block")
+        url = await link_element.get_attribute("href") if link_element else None
+        full_url = f"https://www.amazon.in{url}" if url else None
+
+        if not full_url:
+            print(f"❌ Invalid URL found for product: {url}")
+            return None
+
+        # Title
+        title_element = await link_element.query_selector("div") if link_element else None
         title = await title_element.inner_text() if title_element else None
 
-        url_element = await card.query_selector('h2 a')
-        href = await url_element.get_attribute('href') if url_element else None
-        raw_url = "https://www.amazon.in" + href if href else None
-        url = shorten_url(ensure_affiliate_tag(raw_url)) if raw_url else None
-
-        image_element = await card.query_selector('img')
-        image = await image_element.get_attribute('src') if image_element else None
-
-        price_element = await card.query_selector("span.a-price > span.a-offscreen")
+        # Price
+        price_element = await card.query_selector("span._cDEzb_p13n-sc-price_3mJ9Z")
         price = await price_element.inner_text() if price_element else None
 
-        original_price_element = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
-        original_price = await original_price_element.inner_text() if original_price_element else None
-
-        discount_element = await card.query_selector("span.a-letter-space + span.a-color-base")
-        discount = await discount_element.inner_text() if discount_element else None
-
-        # Offers
-        bank_offer = None
-        normal_offer = None
-        offer_spans = await card.query_selector_all("span.a-size-small")
-        for span in offer_spans:
-            text = await span.inner_text()
-            if any(keyword in text.lower() for keyword in ["bank offer", "credit", "debit", "emi"]):
-                bank_offer = text
-            elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
-                normal_offer = text
+        # Image
+        img_element = await card.query_selector("img.p13n-sc-dynamic-image")
+        image = await img_element.get_attribute("src") if img_element else None
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Discount % calculation
-        discount_percent = None
-        try:
-            current = convert_price_to_float(price)
-            original = convert_price_to_float(original_price)
-            if current and original:
-                discount_percent = round(((original - current) / original) * 100)
-        except:
-            pass
+        # Open individual product page
+        product_page = await context.new_page()
+        await product_page.goto(full_url, timeout=60000)
+        await product_page.wait_for_load_state("load")
 
-        # Validation
-        if not url or not isinstance(url, str):
-            raise ValueError(f"Invalid URL found for product: {title}, raw URL: {url}")
-        if not title or not isinstance(title, str):
-            raise ValueError(f"Invalid Title found: {title}")
+        # Coupon/discount
+        coupon = ""
+        coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
+        if coupon_element:
+            coupon = await coupon_element.inner_text() or await coupon_element.get_attribute("value")
+
+        # Bank/EMI Offers
+        offer_text = ""
+        offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
+        if offer_element:
+            offer_text = await offer_element.inner_text()
+
+        # Deal (Lightning Deal, Deal of the Day etc.)
+        deal_msg = ""
+        deal_element = await product_page.query_selector("div#100_dealView_0 .a-text-bold, span.a-size-medium.a-color-price")
+        if deal_element:
+            deal_msg = await deal_element.inner_text()
+
+        await product_page.close()
 
         return {
-            "title": title.strip(),
-            "url": url.strip(),
+            "title": title,
+            "url": full_url,
             "image": image,
             "price": price,
-            "original_price": original_price,
-            "discount": discount,
-            "discount_percent": discount_percent,
             "rating": rating,
-            "bank_offer": bank_offer,
-            "normal_offer": normal_offer
+            "coupon": coupon.strip(),
+            "bank_offer": offer_text.strip(),
+            "deal": deal_msg.strip(),
+            "category": category_name
         }
 
     except Exception as e:
-        print("❌ Error in extract_product_data:", e)
+        print(f"❌ Error extracting data for product: {e}")
         return None
 
 
