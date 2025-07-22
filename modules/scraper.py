@@ -12,20 +12,14 @@ async def async_extract_product_data(card):
         title = await title_element.inner_text() if title_element else None
 
         url_element = await card.query_selector('a.a-link-normal.aok-block')
-        href = await url_element.get_attribute('href') if url_element else None
+        href = url_element.get_attribute('href') if url_element else None  # ❗ No await
         url = "https://www.amazon.in" + href if href else None
 
         image_element = await card.query_selector('img.a-dynamic-image')
-        image = await image_element.get_attribute('src') if image_element else None
+        image = image_element.get_attribute('src') if image_element else None  # ❗ No await
 
         price_element = await card.query_selector('._cDEzb_p13n-sc-price_3mJ9Z')
         price = await price_element.inner_text() if price_element else None
-
-        # These may still be optional or absent on many cards
-        original_price = None
-        discount = None
-        bank_offer = None
-        normal_offer = None
 
         if not url or not title:
             raise ValueError(f"Invalid data: url={url}, title={title}")
@@ -35,15 +29,16 @@ async def async_extract_product_data(card):
             "url": url.strip(),
             "image": image,
             "price": price,
-            "original_price": original_price,
-            "discount": discount,
-            "bank_offer": bank_offer,
-            "normal_offer": normal_offer
+            "original_price": None,
+            "discount": None,
+            "bank_offer": None,
+            "normal_offer": None
         }
 
     except Exception as e:
         print("❌ Error in extract_product_data:", e)
         return None
+
 
 
 
