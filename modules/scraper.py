@@ -13,7 +13,12 @@ async def async_extract_product_data(card):
 
         url_element = await card.query_selector('h2 a')
         href = await url_element.get_attribute('href') if url_element else None
-        url = "https://www.amazon.in" + href if href else None
+        url = f"https://www.amazon.in{href}" if href else None
+
+        if not title or not url:
+            # Log once to trace skipped products
+            print(f"⚠️ Skipping card due to missing title or url: title={title}, url={url}")
+            return None
 
         image_element = await card.query_selector('img')
         image = await image_element.get_attribute('src') if image_element else None
@@ -30,7 +35,6 @@ async def async_extract_product_data(card):
         bank_offer = None
         normal_offer = None
 
-        # Check for bank or normal offers (like coupon)
         offer_spans = await card.query_selector_all("span.a-size-small")
         for span in offer_spans:
             text = await span.inner_text()
@@ -38,12 +42,6 @@ async def async_extract_product_data(card):
                 bank_offer = text
             elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
                 normal_offer = text
-
-        # Validation to prevent broken data from crashing
-        if not url or not isinstance(url, str):
-            raise ValueError(f"Invalid URL found for product: {title}, raw URL: {url}")
-        if not title or not isinstance(title, str):
-            raise ValueError(f"Invalid Title found: {title}")
 
         return {
             "title": title.strip(),
@@ -59,6 +57,7 @@ async def async_extract_product_data(card):
     except Exception as e:
         print("❌ Error in extract_product_data:", e)
         return None
+
 
 
 async def scrape_single_combo_product():
