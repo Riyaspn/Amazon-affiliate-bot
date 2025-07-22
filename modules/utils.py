@@ -208,11 +208,16 @@ async def get_browser_context(browser_type):
     return browser, context
 
 
+import re
+
 def escape_markdown(text):
     if not text:
         return ""
+    # Escape \ first
+    text = text.replace('\\', '\\\\')
+    # Escape all other markdown special characters
     escape_chars = r"_*[]()~`>#+-=|{}.!"
-    return ''.join(['\\' + c if c in escape_chars else c for c in text])
+    return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
 
 
 def get_browser_type(playwright):
