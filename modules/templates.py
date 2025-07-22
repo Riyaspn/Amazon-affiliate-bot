@@ -66,7 +66,7 @@ def build_photo_caption(product, label_emoji="🛍️", title_prefix=""):
     bank_offer = escape_markdown(product.get("bank_offer", ""))
     normal_offer = escape_markdown(product.get("normal_offer", ""))
 
-    caption = f"{label_emoji} {title_prefix} *[{title}]({url})*\n\n"
+    caption = f"{label_emoji} {escape_markdown(title_prefix)} *[{title}]({url})*\n\n"
     caption += format_price_block(price, mrp, discount) + "\n"
     if bank_offer:
         caption += f"💳 *{bank_offer}*\n"
