@@ -101,7 +101,7 @@ async def scrape_single_combo_product():
             random.shuffle(cards)
 
             for card in cards:
-                data = await async_extract_product_data(card)
+                data = await extract_product_data(card)
                 if data and data['url'] and data['image']:
                     await browser.close()
                     return label, [data]
@@ -128,7 +128,7 @@ async def scrape_product_of_the_day():
 
             all_data = []
             for card in cards:
-                data = await async_extract_product_data(card)
+                data = await extract_product_data(card)
                 if data and data["price"] and data["original_price"]:
                     try:
                         price_val = convert_price_to_float(data["price"])
@@ -191,7 +191,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 if len(results) >= max_results:
                     break
 
-                data = await async_extract_product_data(card)
+                data = await extract_product_data(card)
                 if not data:
                     continue
 
@@ -258,7 +258,7 @@ async def scrape_budget_products():
                 cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
 
                 for card in cards:
-                    product = await async_extract_product_data(card)
+                    product = await extract_product_data(card)
                     if product and product["price"]:
                         try:
                             price_val = convert_price_to_float(product["price"])
@@ -292,7 +292,7 @@ async def scrape_hidden_gem():
             random.shuffle(cards)
 
             for card in cards:
-                product = await async_extract_product_data(card)
+                product = await extract_product_data(card)
                 if product:
                     await browser.close()
                     return label, [product]
