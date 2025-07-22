@@ -185,7 +185,8 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 filename = f"top5_error_{category_str.lower().replace(' ', '_')}.png"
                 await page.screenshot(path=filename)
             except Exception as e:
-    print(f"❌ Screenshot failed for category ({category_name}): {e}")
+                print(f"❌ Screenshot failed for category ({category_name}): {e}")
+
 
         return []
 
