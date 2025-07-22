@@ -208,12 +208,14 @@ async def get_browser_context(browser_type):
     return browser, context
 
 
+
 import re
 
-def escape_markdown(text):
+def escape_markdown_v2(text):
     if not text:
         return ""
-    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!\\])', r'\\\1', text)
+    return re.sub(r'([_*\[\]()~`>#+\-=|{}.!\\])', r'\\\1', str(text))
+
 
 
 
