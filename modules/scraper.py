@@ -9,10 +9,11 @@ from modules.utils import convert_price_to_float
 async def async_extract_product_data(card):
     try:
         title_element = await card.query_selector('h2 a span')
-        title = await title_element.inner_text() if title_element else "No title"
+        title = await title_element.inner_text() if title_element else None
 
         url_element = await card.query_selector('h2 a')
-        url = "https://www.amazon.in" + await url_element.get_attribute('href') if url_element else None
+        href = await url_element.get_attribute('href') if url_element else None
+        url = "https://www.amazon.in" + href if href else None
 
         image_element = await card.query_selector('img')
         image = await image_element.get_attribute('src') if image_element else None
@@ -38,9 +39,15 @@ async def async_extract_product_data(card):
             elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
                 normal_offer = text
 
+        # Validation to prevent broken data from crashing
+        if not url or not isinstance(url, str):
+            raise ValueError(f"Invalid URL found for product: {title}, raw URL: {url}")
+        if not title or not isinstance(title, str):
+            raise ValueError(f"Invalid Title found: {title}")
+
         return {
             "title": title.strip(),
-            "url": url,
+            "url": url.strip(),
             "image": image,
             "price": price,
             "original_price": original_price,
@@ -50,8 +57,9 @@ async def async_extract_product_data(card):
         }
 
     except Exception as e:
-        print("Error in extract_product_data:", e)
+        print("❌ Error in extract_product_data:", e)
         return None
+
 
 async def scrape_single_combo_product():
     combo = random.choice(COMBO_DEAL_CATEGORIES)
