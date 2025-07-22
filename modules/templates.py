@@ -20,22 +20,23 @@ def format_price_block(price, mrp, discount):
 
 def format_list_item(i, p):
     title = escape_markdown(p['title'])
-    url = p['url']
+    url = escape_markdown(p['url'])  # ✅ fix applied
     price = escape_markdown(p.get('price', ''))
     mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
     discount = escape_markdown(p.get('discount', ''))
     bank_offer = escape_markdown(p.get('bank_offer') or "")
     normal_offer = escape_markdown(p.get('normal_offer') or "")
-    label = p.get('label', '')
+    label = escape_markdown(p.get('label', ''))  # ✅ add this too
 
-    line = f"{i}. {label} [{title}]({url})\n"
+    line = f"{i}\\. {label} \\[{title}\\]\\({url}\\)\n"
     line += format_price_block(price, mrp, discount) + "\n"
     if bank_offer:
         line += f"💳 *{bank_offer}*\n"
     if normal_offer:
         line += f"💥 *{normal_offer}*\n"
-    line += "\n"
+    line += "\n\n"  # ✅ double newline for spacing
     return line
+
 
 
 def format_top5_markdown(products, category):
