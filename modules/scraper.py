@@ -8,40 +8,27 @@ from modules.utils import convert_price_to_float
 
 async def async_extract_product_data(card):
     try:
-        title_element = await card.query_selector('h2 a span')
+        title_element = await card.query_selector('._cDEzb_p13n-sc-css-line-clamp-3_g3dy1')
         title = await title_element.inner_text() if title_element else None
 
-        url_element = await card.query_selector('h2 a')
+        url_element = await card.query_selector('a.a-link-normal.aok-block')
         href = await url_element.get_attribute('href') if url_element else None
-        url = f"https://www.amazon.in{href}" if href else None
+        url = "https://www.amazon.in" + href if href else None
 
-        if not title or not url:
-            # Log once to trace skipped products
-            print(f"⚠️ Skipping card due to missing title or url: title={title}, url={url}")
-            return None
-
-        image_element = await card.query_selector('img')
+        image_element = await card.query_selector('img.a-dynamic-image')
         image = await image_element.get_attribute('src') if image_element else None
 
-        price_element = await card.query_selector("span.a-price > span.a-offscreen")
+        price_element = await card.query_selector('._cDEzb_p13n-sc-price_3mJ9Z')
         price = await price_element.inner_text() if price_element else None
 
-        original_price_element = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
-        original_price = await original_price_element.inner_text() if original_price_element else None
-
-        discount_element = await card.query_selector("span.a-letter-space + span.a-color-base")
-        discount = await discount_element.inner_text() if discount_element else None
-
+        # These may still be optional or absent on many cards
+        original_price = None
+        discount = None
         bank_offer = None
         normal_offer = None
 
-        offer_spans = await card.query_selector_all("span.a-size-small")
-        for span in offer_spans:
-            text = await span.inner_text()
-            if any(keyword in text.lower() for keyword in ["bank offer", "credit", "debit", "emi"]):
-                bank_offer = text
-            elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
-                normal_offer = text
+        if not url or not title:
+            raise ValueError(f"Invalid data: url={url}, title={title}")
 
         return {
             "title": title.strip(),
@@ -57,6 +44,7 @@ async def async_extract_product_data(card):
     except Exception as e:
         print("❌ Error in extract_product_data:", e)
         return None
+
 
 
 
