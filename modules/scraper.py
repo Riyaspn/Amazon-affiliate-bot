@@ -132,18 +132,17 @@ from modules.utils import deduplicate_variants
 async def scrape_top5_per_category(category_name, category_url, fixed=False, max_results=15):
     print(f"🔍 Scraping {category_name}: {category_url}")
     page = None
+    browser = None
 
     try:
         async with async_playwright() as playwright:
-            # 1) pick the right browser engine
+            # 1) Pick the right browser engine
             browser_type = get_browser_type(playwright)
 
-            # 2) spin up the browser
+            # 2) Launch browser
             browser = await browser_type.launch(headless=True)
 
-            # 3) create a new context + page
-            #    – or you can use your helper, but you must unpack
-            # browser, context = await get_browser_context(browser_type)
+            # 3) Create context + page
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent=USER_AGENT,
@@ -151,7 +150,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
             )
             page = await context.new_page()
 
-            # 4) navigate & scrape
+            # 4) Navigate and scrape
             await page.goto(category_url, timeout=60000)
             await page.wait_for_selector("div.zg-grid-general-faceout", timeout=30000)
             cards = await page.query_selector_all("div.zg-grid-general-faceout")
@@ -168,28 +167,27 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                     continue
 
                 seen_titles.add(data["title"])
-                # apply affiliate tag & shorten
                 data["url"] = ensure_affiliate_tag(data["url"])
                 data["short_url"] = await shorten_url(data["url"])
                 results.append(data)
 
-            await browser.close()
-            # return only the top 5
             return results[:5]
 
-        except Exception as e:
-            print(f"❌ Error scraping {category_name}: {e}")
-                if page:
-                    try:
-                        category_str = str(category_name)  # ✅ ensure it's a string
-                        filename = f"top5_error_{category_str.lower().replace(' ', '_')}.png"
-                        await page.screenshot(path=filename)
-                    except Exception as e:
-                        print(f"❌ Screenshot failed for category ({category_name}): {e}")
+    except Exception as e:
+        print(f"❌ Error scraping {category_name}: {e}")
+        if page:
+            try:
+                category_str = str(category_name)
+                filename = f"top5_error_{category_str.lower().replace(' ', '_')}.png"
+                await page.screenshot(path=filename)
+            except Exception as screenshot_err:
+                print(f"❌ Screenshot failed for category ({category_name}): {screenshot_err}")
 
+    finally:
+        if browser:
+            await browser.close()
 
-
-        return []
+    return []
 
 
 
