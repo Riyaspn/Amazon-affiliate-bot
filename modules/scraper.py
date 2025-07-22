@@ -1,6 +1,4 @@
-import random
 import re
-import asyncio
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
@@ -23,7 +21,6 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 from modules.utils import (
     convert_price_to_float,
     ensure_affiliate_tag,
-    shorten_url,
     get_browser_type,
     USER_AGENT,
 )
@@ -88,12 +85,11 @@ async def extract_product_data(card, context, category_name):
             "price": price,
             "original_price": original_price,
             "rating": rating,
-            "coupon": coupon.strip(),
-            "bank_offer": bank_offer.strip(),
-            "deal": deal.strip(),
+            "coupon": (coupon or "").strip(),
+            "bank_offer": (bank_offer or "").strip(),
+            "deal": (deal or "").strip(),
             "category": category_name,
-        }
-
+        } 
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
@@ -174,7 +170,7 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 import random
 
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from modules.utils import ensure_affiliate_tag, shorten_url
+from modules.utils import ensure_affiliate_tag
 from modules.utils import get_browser_type, USER_AGENT
 from modules.utils import deduplicate_variants
 
@@ -222,7 +218,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
 
                 try:
                     data["url"] = ensure_affiliate_tag(url)
-                    data["short_url"] = await shorten_url(data["url"])
+                    data["short_url"] = shorten_url(data["url"])
                     results.append(data)
                 except Exception as url_err:
                     print(f"⚠️ Skipping due to URL error: {url_err}")
