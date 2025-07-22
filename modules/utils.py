@@ -213,10 +213,10 @@ import re
 def escape_markdown(text):
     if not text:
         return ""
-    # Telegram MarkdownV2 requires escaping \ first
-    text = text.replace('\\', '\\\\')
+    text = text.replace('\\', '\\\\')  # Escape backslashes first
     escape_chars = r"_*[]()~`>#+-=|{}.!"
     return ''.join(['\\' + c if c in escape_chars else c for c in text])
+
 
 
 
