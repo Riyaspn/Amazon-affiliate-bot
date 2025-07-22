@@ -6,15 +6,17 @@ def format_price_block(price, mrp, discount):
     if discount:
         block += f"💰 *{discount}*"
     if mrp:
-        # Strike-through original price (MRP)
+        mrp = mrp.lstrip("₹")
         if block:
             block += ", "
         block += f"MRP ~~₹{mrp}~~"
     if price:
+        price = price.lstrip("₹")
         if block:
             block += ", "
         block += f"Now at ₹{price}"
     return block
+
 
 def format_list_item(i, p):
     title = escape_markdown(p['title'])
@@ -34,6 +36,7 @@ def format_list_item(i, p):
         line += f"💥 *{normal_offer}*\n"
     line += "\n"
     return line
+
 
 def format_top5_markdown(products, category):
     message = f"📦 *Top 5 in {escape_markdown(category)}*\n\n"
