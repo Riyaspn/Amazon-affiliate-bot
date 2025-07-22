@@ -17,22 +17,34 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, unquote
 
 
+import random
+import asyncio
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from modules.utils import (
+    convert_price_to_float,
+    ensure_affiliate_tag,
+    shorten_url,
+    get_browser_type,
+    USER_AGENT,
+)
+
+# 🔍 Extract individual product data
 async def extract_product_data(card, context, category_name):
     try:
         # Product link
         link_element = await card.query_selector("a.a-link-normal.aok-block")
-        if not link_element:
-            return None
-        url = await link_element.get_attribute("href")
+        url = await link_element.get_attribute("href") if link_element else None
         full_url = f"https://www.amazon.in{url}" if url else None
+
         if not full_url:
+            print(f"❌ Invalid URL found for product: {url}")
             return None
 
         # Title
-        title_element = await link_element.query_selector("div")
+        title_element = await link_element.query_selector("div") if link_element else None
         title = await title_element.inner_text() if title_element else None
 
-        # Price
+        # Price (current price)
         price_element = await card.query_selector("span._cDEzb_p13n-sc-price_3mJ9Z")
         price = await price_element.inner_text() if price_element else None
 
@@ -44,52 +56,46 @@ async def extract_product_data(card, context, category_name):
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Visit product page
+        # Open individual product page
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # Coupon / Instant Offer
-        coupon = ""
-        coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
-        if coupon_element:
-            coupon = await coupon_element.get_attribute("value") or await coupon_element.inner_text() or ""
-
-        # Bank / EMI Offer
-        offer_text = ""
-        offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
-        if offer_element:
-            offer_text = await offer_element.inner_text() or ""
-
-        # Deal Type
-        deal_msg = ""
-        deal_element = await product_page.query_selector("div#100_dealView_0 .a-text-bold, span.a-size-medium.a-color-price")
-        if deal_element:
-            deal_msg = await deal_element.inner_text() or ""
-
-        # Original Price
-        original_price = ""
+        # Original price (strikethrough price)
         original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
-        if original_price_element:
-            original_price = await original_price_element.inner_text()
+        original_price = await original_price_element.inner_text() if original_price_element else ""
+
+        # Coupon
+        coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
+        coupon = await coupon_element.inner_text() if coupon_element else ""
+        if not coupon:
+            coupon = await coupon_element.get_attribute("value") if coupon_element else ""
+
+        # Bank Offer (Delivery block)
+        offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
+        bank_offer = await offer_element.inner_text() if offer_element else ""
+
+        # Deal label (Deal of the Day / Lightning Deal)
+        deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
+        deal = await deal_element.inner_text() if deal_element else ""
 
         await product_page.close()
 
         return {
-            "title": title.strip() if title else None,
+            "title": title,
             "url": full_url,
             "image": image,
-            "price": price.strip() if price else None,
-            "original_price": original_price.strip(),
-            "rating": rating.strip() if rating else None,
+            "price": price,
+            "original_price": original_price,
+            "rating": rating,
             "coupon": coupon.strip(),
-            "bank_offer": offer_text.strip(),
-            "deal": deal_msg.strip(),
-            "category": category_name
+            "bank_offer": bank_offer.strip(),
+            "deal": deal.strip(),
+            "category": category_name,
         }
 
     except Exception as e:
-        print(f"❌ Error extracting product data: {e}")
+        print(f"❌ Error extracting data for product: {e}")
         return None
 
 
@@ -174,7 +180,6 @@ from modules.utils import deduplicate_variants
 
 async def scrape_top5_per_category(category_name, category_url, fixed=False, max_results=15):
     print(f"🔍 Scraping {category_name}: {category_url}")
-    page = None
     browser = None
 
     try:
@@ -185,7 +190,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
             context = await browser.new_context(
                 java_script_enabled=True,
                 user_agent=USER_AGENT,
-                viewport={"width": 1280, "height": 800}
+                viewport={"width": 1280, "height": 800},
             )
             page = await context.new_page()
 
@@ -205,9 +210,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 if not data:
                     continue
 
-                title = data.get("title")
-                url = data.get("url")
-
+                title, url = data.get("title"), data.get("url")
                 if not isinstance(title, str) or not isinstance(url, str) or not url.startswith("http"):
                     print(f"⚠️ Skipping invalid product data: {data}")
                     continue
@@ -222,19 +225,18 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                     data["short_url"] = await shorten_url(data["url"])
                     results.append(data)
                 except Exception as url_err:
-                    print(f"⚠️ URL error for {title}: {url_err}")
+                    print(f"⚠️ Skipping due to URL error: {url_err}")
                     continue
 
             return results[:5]
 
     except Exception as e:
         print(f"❌ Error scraping {category_name}: {e}")
-        if page:
-            try:
-                filename = f"top5_error_{category_name.lower().replace(' ', '_')}.png"
-                await page.screenshot(path=filename)
-            except Exception as screenshot_err:
-                print(f"❌ Screenshot failed: {screenshot_err}")
+        try:
+            await page.screenshot(path=f"top5_error_{category_name.lower().replace(' ', '_')}.png")
+        except Exception:
+            print(f"❌ Screenshot failed for category: {category_name}")
+
     finally:
         if browser:
             await browser.close()
