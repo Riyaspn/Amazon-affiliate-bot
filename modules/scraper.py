@@ -144,6 +144,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
 
     try:
         async with async_playwright() as playwright:
+            # Setup browser
             browser_type = get_browser_type(playwright)
             browser = await browser_type.launch(headless=True)
 
@@ -153,6 +154,8 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 viewport={"width": 1280, "height": 800}
             )
             page = await context.new_page()
+
+            # Load category page
             await page.goto(category_url, timeout=60000)
             await page.wait_for_selector("div.zg-grid-general-faceout", timeout=30000)
             cards = await page.query_selector_all("div.zg-grid-general-faceout")
@@ -160,6 +163,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
             print(f"🔎 Found {len(cards)} products under {category_name}")
             results, seen_titles = [], set()
 
+            # Process each card
             for card in cards:
                 if len(results) >= max_results:
                     break
@@ -171,7 +175,12 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 title = data.get("title")
                 url = data.get("url")
 
-                if not isinstance(title, str) or not isinstance(url, str):
+                # Validate title & URL
+                if (
+                    not isinstance(title, str)
+                    or not isinstance(url, str)
+                    or not url.startswith("http")
+                ):
                     print(f"⚠️ Skipping invalid product data: {data}")
                     continue
 
@@ -181,6 +190,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
                 seen_titles.add(title)
 
                 try:
+                    # Safely process URLs
                     data["url"] = ensure_affiliate_tag(url)
                     data["short_url"] = await shorten_url(data["url"])
                     results.append(data)
@@ -205,6 +215,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
             await browser.close()
 
     return []
+
 
 
 
