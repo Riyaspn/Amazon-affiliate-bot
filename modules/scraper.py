@@ -37,8 +37,8 @@ async def extract_product_data(card, context, category_name):
             print(f"❌ Invalid URL found for product: {url}")
             return None
 
-        # Title
-        title_element = await link_element.query_selector("div") if link_element else None
+        # Title (more specific selector from card)
+        title_element = await card.query_selector("._cDEzb_p13n-sc-css-line-clamp-3_g3dy1")
         title = await title_element.inner_text() if title_element else None
         if not title:
             print("❌ Skipping product with missing title.")
