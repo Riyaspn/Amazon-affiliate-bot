@@ -213,11 +213,11 @@ import re
 def escape_markdown(text):
     if not text:
         return ""
-    # Escape \ first
+    # Telegram MarkdownV2 requires escaping \ first
     text = text.replace('\\', '\\\\')
-    # Escape all other markdown special characters
     escape_chars = r"_*[]()~`>#+-=|{}.!"
-    return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
+    return ''.join(['\\' + c if c in escape_chars else c for c in text])
+
 
 
 def get_browser_type(playwright):
