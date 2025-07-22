@@ -8,36 +8,58 @@ from modules.utils import convert_price_to_float
 
 async def async_extract_product_data(card):
     try:
-        title_element = await card.query_selector('._cDEzb_p13n-sc-css-line-clamp-3_g3dy1')
+        title_element = await card.query_selector('h2 a span')
         title = await title_element.inner_text() if title_element else None
 
-        url_element = await card.query_selector('a.a-link-normal.aok-block')
-        href = url_element.get_attribute('href') if url_element else None  # ❗ No await
+        url_element = await card.query_selector('h2 a')
+        href = await url_element.get_attribute('href') if url_element else None  # ✅ await added
         url = "https://www.amazon.in" + href if href else None
 
-        image_element = await card.query_selector('img.a-dynamic-image')
-        image = image_element.get_attribute('src') if image_element else None  # ❗ No await
+        image_element = await card.query_selector('img')
+        image = await image_element.get_attribute('src') if image_element else None  # ✅ await added
 
-        price_element = await card.query_selector('._cDEzb_p13n-sc-price_3mJ9Z')
+        price_element = await card.query_selector("span.a-price > span.a-offscreen")
         price = await price_element.inner_text() if price_element else None
 
-        if not url or not title:
-            raise ValueError(f"Invalid data: url={url}, title={title}")
+        original_price_element = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
+        original_price = await original_price_element.inner_text() if original_price_element else None
+
+        discount_element = await card.query_selector("span.a-letter-space + span.a-color-base")
+        discount = await discount_element.inner_text() if discount_element else None
+
+        bank_offer = None
+        normal_offer = None
+
+        # Check for bank or normal offers (like coupon)
+        offer_spans = await card.query_selector_all("span.a-size-small")
+        for span in offer_spans:
+            text = await span.inner_text()
+            if any(keyword in text.lower() for keyword in ["bank offer", "credit", "debit", "emi"]):
+                bank_offer = text
+            elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
+                normal_offer = text
+
+        # Validation
+        if not url or not isinstance(url, str):
+            raise ValueError(f"Invalid URL found for product: {title}, raw URL: {url}")
+        if not title or not isinstance(title, str):
+            raise ValueError(f"Invalid Title found: {title}")
 
         return {
             "title": title.strip(),
             "url": url.strip(),
             "image": image,
             "price": price,
-            "original_price": None,
-            "discount": None,
-            "bank_offer": None,
-            "normal_offer": None
+            "original_price": original_price,
+            "discount": discount,
+            "bank_offer": bank_offer,
+            "normal_offer": normal_offer
         }
 
     except Exception as e:
         print("❌ Error in extract_product_data:", e)
         return None
+
 
 
 
