@@ -31,7 +31,7 @@ async def send_top5_per_category(fixed=False):
     from modules.telegram import send as send_message
     from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
-    await send_message("🛒 *Top 5 Per Category*", parse_mode="Markdown")
+    await send_message("🛒 *Top 5 Per Category*", parse_mode="MarkdownV2")
 
     if fixed:
         categories = FIXED_CATEGORIES.items()
@@ -58,7 +58,7 @@ async def send_top5_per_category(fixed=False):
             continue
 
         message = format_top5_markdown(top5, category_name)
-        await send_message(message, parse_mode="Markdown")
+        await send_message(message, parse_mode="MarkdownV2")
 
 
 
