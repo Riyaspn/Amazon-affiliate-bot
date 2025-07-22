@@ -6,59 +6,69 @@ from modules.prebuilt import COMBO_DEAL_CATEGORIES, HIDDEN_GEM_CATEGORIES
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from modules.utils import convert_price_to_float
 
-async def async_extract_product_data(card):
-    try:
-        title_element = await card.query_selector('h2 a span')
-        title = await title_element.inner_text() if title_element else None
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs, unquote
+from modules.utils import shorten_url, add_label, ensure_affiliate_tag
 
-        url_element = await card.query_selector('h2 a')
-        href = await url_element.get_attribute('href') if url_element else None  # ✅ await added
-        url = "https://www.amazon.in" + href if href else None
+async def extract_product_data(page, max_products=10):
+    html = await page.content()
+    soup = BeautifulSoup(html, "html.parser")
+    
+    containers = soup.select("div.p13n-sc-uncoverable-faceout, div.zg-grid-general-faceout, div._cDEzb_znj4z_1i3hH")  # fallback selectors
+    products = []
 
-        image_element = await card.query_selector('img')
-        image = await image_element.get_attribute('src') if image_element else None  # ✅ await added
+    for container in containers:
+        if len(products) >= max_products:
+            break
 
-        price_element = await card.query_selector("span.a-price > span.a-offscreen")
-        price = await price_element.inner_text() if price_element else None
+        try:
+            title_elem = container.select_one("div._cDEzb_p13n-sc-css-line-clamp-3_g3dy1")
+            price_elem = container.select_one("span.a-price > span.a-offscreen")
+            original_price_elem = container.select_one("span.a-text-price > span.a-offscreen")
+            rating_elem = container.select_one("span.a-icon-alt")
+            image_elem = container.select_one("img")
+            link_elem = container.select_one("a.a-link-normal")
 
-        original_price_element = await card.query_selector("span.a-price.a-text-price > span.a-offscreen")
-        original_price = await original_price_element.inner_text() if original_price_element else None
+            # New selectors for badges and bank/card offers
+            badge_elem = container.select_one("span.a-badge-text")
+            offer_elem = container.select_one("span.a-color-secondary, span.a-color-price")
 
-        discount_element = await card.query_selector("span.a-letter-space + span.a-color-base")
-        discount = await discount_element.inner_text() if discount_element else None
+            if not all([title_elem, price_elem, rating_elem, image_elem, link_elem]):
+                continue
 
-        bank_offer = None
-        normal_offer = None
+            title = title_elem.get_text(strip=True)
+            price = price_elem.get_text(strip=True)
+            original_price = original_price_elem.get_text(strip=True) if original_price_elem else None
+            rating = rating_elem.get_text(strip=True)
+            image = image_elem["src"]
+            url_suffix = link_elem["href"]
 
-        # Check for bank or normal offers (like coupon)
-        offer_spans = await card.query_selector_all("span.a-size-small")
-        for span in offer_spans:
-            text = await span.inner_text()
-            if any(keyword in text.lower() for keyword in ["bank offer", "credit", "debit", "emi"]):
-                bank_offer = text
-            elif any(keyword in text.lower() for keyword in ["coupon", "offer", "discount"]):
-                normal_offer = text
+            if "/sspa/" in url_suffix:
+                continue  # skip sponsored
 
-        # Validation
-        if not url or not isinstance(url, str):
-            raise ValueError(f"Invalid URL found for product: {title}, raw URL: {url}")
-        if not title or not isinstance(title, str):
-            raise ValueError(f"Invalid Title found: {title}")
+            full_url = f"https://www.amazon.in{url_suffix}"
+            affiliate_url = shorten_url(ensure_affiliate_tag(full_url))
 
-        return {
-            "title": title.strip(),
-            "url": url.strip(),
-            "image": image,
-            "price": price,
-            "original_price": original_price,
-            "discount": discount,
-            "bank_offer": bank_offer,
-            "normal_offer": normal_offer
-        }
+            badge_text = badge_elem.get_text(strip=True) if badge_elem else None
+            offer_text = offer_elem.get_text(strip=True) if offer_elem else None
 
-    except Exception as e:
-        print("❌ Error in extract_product_data:", e)
-        return None
+            products.append({
+                "title": title,
+                "price": price,
+                "original_price": original_price,
+                "rating": rating,
+                "image": image,
+                "url": affiliate_url,
+                "label": add_label({"price": price, "rating": rating}),
+                "badge": badge_text,
+                "offer": offer_text
+            })
+
+        except Exception as e:
+            print(f"⚠️ Error parsing product: {e}")
+            continue
+
+    return products
 
 
 
