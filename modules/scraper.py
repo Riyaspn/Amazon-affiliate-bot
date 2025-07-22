@@ -40,10 +40,16 @@ async def extract_product_data(card, context, category_name):
         # Title
         title_element = await link_element.query_selector("div") if link_element else None
         title = await title_element.inner_text() if title_element else None
+        if not title:
+            print("❌ Skipping product with missing title.")
+            return None
 
         # Price (current price)
         price_element = await card.query_selector("span._cDEzb_p13n-sc-price_3mJ9Z")
         price = await price_element.inner_text() if price_element else None
+        if not price:
+            print("❌ Skipping product with missing price.")
+            return None
 
         # Image
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
@@ -64,9 +70,13 @@ async def extract_product_data(card, context, category_name):
 
         # Coupon
         coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
-        coupon = await coupon_element.inner_text() if coupon_element else ""
-        if not coupon:
-            coupon = await coupon_element.get_attribute("value") if coupon_element else ""
+        if coupon_element:
+            try:
+                coupon = await coupon_element.inner_text()
+            except:
+                coupon = await coupon_element.get_attribute("value")
+        else:
+            coupon = ""
 
         # Bank Offer (Delivery block)
         offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
@@ -79,17 +89,18 @@ async def extract_product_data(card, context, category_name):
         await product_page.close()
 
         return {
-            "title": title,
+            "title": title.strip(),
             "url": full_url,
             "image": image,
-            "price": price,
-            "original_price": original_price,
-            "rating": rating,
-            "coupon": (coupon or "").strip(),
-            "bank_offer": (bank_offer or "").strip(),
-            "deal": (deal or "").strip(),
+            "price": price.strip(),
+            "original_price": original_price.strip(),
+            "rating": rating.strip() if rating else "",
+            "coupon": coupon.strip(),
+            "bank_offer": bank_offer.strip(),
+            "deal": deal.strip(),
             "category": category_name,
-        } 
+        }
+
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
