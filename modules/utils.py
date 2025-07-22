@@ -96,13 +96,14 @@ def ensure_affiliate_tag(url: str, tag: str = "storesofriyas-21") -> str:
     from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
     if not isinstance(url, str) or not url.startswith("http"):
-        raise ValueError(f"Invalid URL provided to ensure_affiliate_tag: {url}")
+        raise TypeError(f"[ensure_affiliate_tag] Invalid URL (not a str): {url}")
 
     parsed = urlparse(url)
     query = parse_qs(parsed.query)
     query["tag"] = [tag]
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
+
 
 
 def convert_price_to_float(price_str):
