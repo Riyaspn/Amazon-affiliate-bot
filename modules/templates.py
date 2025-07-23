@@ -20,7 +20,7 @@ def format_price_block(price, mrp, discount):
 
 def format_list_item(i, p):
     title = escape_markdown(p['title'])
-    url = p['url']  # DO NOT ESCAPE
+    url = p['url']  # DO NOT escape URL
     price = escape_markdown(p.get('price', ''))
     mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
     discount = escape_markdown(p.get('discount', ''))
