@@ -81,6 +81,7 @@ def build_photo_caption(product, label_emoji="🛍️", title_prefix=""):
         caption += f"💳 *{bank_offer}*\n"
     if normal_offer:
         caption += f"💥 *{normal_offer}*\n"
+    caption += f"\n\n🔗 [Explore more in this category]({category_url})"    
     return caption.strip()
 
 def format_product_of_the_day(product, category=""):
