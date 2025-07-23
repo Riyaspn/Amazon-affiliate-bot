@@ -179,83 +179,46 @@ async def scrape_product_of_the_day():
     return []
 
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
-from modules.utils import get_browser_type, get_browser_context
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 import random
-
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from modules.utils import ensure_affiliate_tag
-from modules.utils import get_browser_type, USER_AGENT
-from modules.utils import deduplicate_variants
-
 import re
-from modules.utils import get_soup_from_url, convert_price_to_float, deduplicate_variants, ensure_affiliate_tag
+from modules.utils import get_soup_from_url, convert_price_to_float, deduplicate_variants, ensure_affiliate_tag, get_browser_type, USER_AGENT, get_browser_context
 
-async def scrape_top5_per_category(category_name, category_url, fixed=False, max_results=15):
+async def scrape_top5_per_category(category_name, category_url, context, fixed=False, max_results=15):
     print(f"🔍 Scraping Bestsellers: {category_name}")
+
     soup = await get_soup_from_url(category_url)
     if soup is None:
         print(f"⚠️ Failed to fetch page for {category_name}")
         return []
 
     product_cards = soup.select("div.p13n-sc-uncoverable-faceout")
+    if not product_cards:
+        print(f"⚠️ No product cards found for {category_name}")
+        return []
+
+    # Open bestseller page in browser context so we can use Playwright to extract from card
+    page = await context.new_page()
+    await page.goto(category_url, timeout=60000)
+    await page.wait_for_load_state("load")
+
+    cards = await page.query_selector_all("div.p13n-sc-uncoverable-faceout")
     seen_titles = set()
     products = []
 
-    for card in product_cards:
+    for card in cards:
         try:
-            title_elem = card.select_one("._cDEzb_p13n-sc-css-line-clamp-3_g3dy1") or card.select_one("._cDEzb_p13n-sc-css-line-clamp-4_2q2cc")
-            price_elem = card.select_one("._cDEzb_p13n-sc-price_3mJ9Z") or card.select_one("span.a-price > span.a-offscreen")
-            rating_elem = card.select_one("span.a-icon-alt")
-            link_elem = card.select_one("a[href]")
-
-            discount_elem = card.select_one("span.a-letter-space + span")  # Sometimes appears with coupon
-            bank_offer_elem = card.select_one("span.a-color-base")         # Bank offer text
-            normal_offer_elem = card.select_one("span.a-text-bold")       # "Deal of the day" style tag
-
-            title = title_elem.text.strip() if title_elem else None
-            price = price_elem.text.strip() if price_elem else None
-            rating = rating_elem.text.strip() if rating_elem else "⭐ N/A"
-            discount = discount_elem.text.strip() if discount_elem else ""
-            bank_offer = bank_offer_elem.text.strip() if bank_offer_elem else ""
-            normal_offer = normal_offer_elem.text.strip() if normal_offer_elem else ""
-
-            url_suffix = link_elem['href'].split('?')[0] if link_elem else None
-            product_url = f"https://www.amazon.in{url_suffix}" if url_suffix else None
-            if product_url:
-                product_url = ensure_affiliate_tag(product_url)
-
-            if not title or not price or not product_url:
-                continue
-
-            try:
-                price_value = convert_price_to_float(price)
-            except:
-                price_value = None
-
-            product = {
-                "title": title,
-                "price": price,
-                "rating": rating,
-                "url": product_url,
-                "label": "🔥 Hot Deal",
-                "category": category_name,
-                "price_value": price_value,
-                "discount": discount,
-                "bank_offer": bank_offer,
-                "normal_offer": normal_offer
-            }
-
-            if title not in seen_titles:
-                seen_titles.add(title)
+            product = await extract_product_data(card, context, category_name)
+            if product and product["title"] not in seen_titles:
+                seen_titles.add(product["title"])
                 products.append(product)
-
-            if len(products) >= 20:  # Collect more to allow for filtering and deduping
+            if len(products) >= 20:
                 break
-
         except Exception as e:
-            print(f"⚠️ Error processing a product card in {category_name}: {e}")
+            print(f"⚠️ Error extracting product from card: {e}")
             continue
+
+    await page.close()
 
     if not products:
         print(f"⚠️ No valid products scraped for: {category_name}")
@@ -263,6 +226,7 @@ async def scrape_top5_per_category(category_name, category_url, fixed=False, max
 
     deduped = deduplicate_variants(products)
     return deduped[:max_results]
+
 
 
 
