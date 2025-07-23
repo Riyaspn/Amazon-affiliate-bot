@@ -54,6 +54,9 @@ async def extract_product_data(card, context, category_name):
         # Image
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
         image = await img_element.get_attribute("src") if img_element else None
+        if not image:
+            print(f"⚠️ No image found for product: {title}")
+
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
@@ -303,7 +306,7 @@ async def scrape_hidden_gem():
 
             for card in cards:
                 product = await extract_product_data(card, context, category_name)
-                if product:
+                if product and product.get("image"):
                     await browser.close()
                     return label, [product]
 
