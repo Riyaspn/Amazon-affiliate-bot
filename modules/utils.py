@@ -213,7 +213,9 @@ async def get_browser_context(browser_type):
 import re
 
 def escape_markdown(text: str) -> str:
-    return text.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+    # Only escape necessary characters for regular Markdown
+    return text.replace("*", "\\*").replace("_", "\\_").replace("`", "\\`").replace("[", "\\[").replace("]", "\\]")
+
 
 
 
