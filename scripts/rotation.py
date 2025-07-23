@@ -9,7 +9,7 @@ from modules.scraper import (
 )
 from modules.prebuilt import get_prebuilt_links, get_hidden_gem, get_random_combo_category
 from modules.templates import (
-    format_top5_markdown,
+    format_top5_html,
     format_budget_picks,
     format_combo_deal_markdown,
     format_product_of_the_day,
@@ -25,13 +25,12 @@ def get_day():
 
 async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
-    from modules.telegram import send as send_markdown  # ✅ Markdown formatting
     from modules.scraper import scrape_top5_per_category
     from modules.templates import format_top5_html
     from modules.telegram import send as send_message
     from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
-    await send_message("🛒 *Top 5 Per Category*", parse_mode="MarkdownV2")
+    await send_message("🛒 *Top 5 Per Category*", parse_mode="HTML")
 
     if fixed:
         categories = FIXED_CATEGORIES.items()
@@ -57,7 +56,7 @@ async def send_top5_per_category(fixed=False):
             print(f"⚠️ No deduplicated products in {category_name}")
             continue
 
-        message = format_top5_markdown(top5, category_name)
+        message = format_top5_html(top5, category_name)
         await send_message(message, parse_mode="HTML")
 
 
