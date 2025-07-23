@@ -18,44 +18,47 @@ def format_price_block(price, mrp, discount):
     return block
 
 
-def format_list_item(i, p):
-    title = escape_markdown(p['title'])
+def format_list_item_html(i, p):
+    title = p['title']
     url = p['url']
-    price = escape_markdown(p.get('price', ''))
-    mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
-    discount = escape_markdown(p.get('discount', ''))
-    bank_offer = escape_markdown(p.get('bank_offer') or "")
-    normal_offer = escape_markdown(p.get('normal_offer') or "")
-    label = escape_markdown(p.get('label', ''))
+    price = p.get('price', '')
+    mrp = p.get('original_price') or p.get('mrp', '')
+    discount = p.get('discount', '')
+    bank_offer = p.get('bank_offer', "")
+    normal_offer = p.get('normal_offer', "")
+    label = p.get('label', '')
 
-    line = f"{i}. {label} [{title}]({url})\n"
+    line = f"<b>{i}. {label} <a href=\"{url}\">{title}</a></b><br>"
     if mrp:
-        line += f"💰 *{price}* (MRP: ~{mrp}~ | {discount})\n"
+        line += f"💰 <b>{price}</b> (MRP: <s>{mrp}</s> | {discount})<br>"
     else:
-        line += f"💰 *{price}*\n"
+        line += f"💰 <b>{price}</b><br>"
     if bank_offer:
-        line += f"💳 *{bank_offer}*\n"
+        line += f"💳 <b>{bank_offer}</b><br>"
     if normal_offer:
-        line += f"💥 *{normal_offer}*\n"
-    line += "\n"
+        line += f"💥 <b>{normal_offer}</b><br>"
+    line += "<br>"
     return line
 
 
 
 
-
-
-def format_top5_markdown(products, category):
-    message = f"📦 *Top 5 in {escape_markdown(category)}*\n\n"
+def format_top5_html(products, category):
+    message = f"📦 <b>Top 5 in {category}</b><br><br>"
     for i, p in enumerate(products, start=1):
-        message += format_list_item(i, p)
+        message += format_list_item_html(i, p)
     return message.strip()
 
-def format_budget_picks(products):
-    message = f"💸 *Budget Picks Under ₹999*\n\n"
+
+
+
+def format_budget_picks_html(products):
+    message = f"💸 <b>Budget Picks Under ₹999</b><br><br>"
     for i, p in enumerate(products, start=1):
-        message += format_list_item(i, p)
+        message += format_list_item_html(i, p)
     return message.strip()
+
+
 
 def format_hidden_gems(products):
     message = f"🧪 *Hidden Gems on Amazon*\n\n"
