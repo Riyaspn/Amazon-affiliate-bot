@@ -28,23 +28,23 @@ def format_list_item_html(i, p):
     normal_offer = p.get('normal_offer', "")
     label = p.get('label', '')
 
-    line = f"<b>{i}. {label} <a href=\"{url}\">{title}</a></b><br>"
+    line = f"<b>{i}. {label} <a href=\"{url}\">{title}</a></b>\n"
     if mrp:
-        line += f"💰 <b>{price}</b> (MRP: <s>{mrp}</s> | {discount})<br>"
+        line += f"💰 <b>{price}</b> (MRP: <s>{mrp}</s> | {discount})\n"
     else:
-        line += f"💰 <b>{price}</b><br>"
+        line += f"💰 <b>{price}</b>\n"
     if bank_offer:
-        line += f"💳 <b>{bank_offer}</b><br>"
+        line += f"💳 <b>{bank_offer}</b>\n"
     if normal_offer:
-        line += f"💥 <b>{normal_offer}</b><br>"
-    line += "<br>"
+        line += f"💥 <b>{normal_offer}</b>\n"
+    line += "\n"
     return line
 
 
 
 
 def format_top5_html(products, category):
-    message = f"📦 <b>Top 5 in {category}</b><br><br>"
+    message = f"📦 <b>Top 5 in {category}</b>\n\n"
     for i, p in enumerate(products, start=1):
         message += format_list_item_html(i, p)
     return message.strip()
@@ -53,7 +53,7 @@ def format_top5_html(products, category):
 
 
 def format_budget_picks_html(products):
-    message = f"💸 <b>Budget Picks Under ₹999</b><br><br>"
+    message = f"💸 <b>Budget Picks Under ₹999</b>\n\n"
     for i, p in enumerate(products, start=1):
         message += format_list_item_html(i, p)
     return message.strip()
