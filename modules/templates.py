@@ -61,10 +61,12 @@ def format_budget_picks_html(products):
 
 
 def format_hidden_gems(products):
-    message = f"🧪 *Hidden Gems on Amazon*\n\n"
+    message = "🧪 *Hidden Gems on Amazon*\n\n"
     for i, p in enumerate(products, start=1):
-        message += format_list_item(i, p)
+        caption = build_photo_caption(p, label_emoji="🧪", title_prefix=f"Hidden Gem #{i}")
+        message += caption + "\n\n"
     return message.strip()
+
 
 def build_photo_caption(product, label_emoji="🛍️", title_prefix=""):
     title = escape_markdown(product.get("title", "No Title"))
