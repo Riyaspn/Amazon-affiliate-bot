@@ -10,7 +10,7 @@ from modules.scraper import (
 from modules.prebuilt import get_prebuilt_links, get_hidden_gem, get_random_combo_category
 from modules.templates import (
     format_top5_html,
-    format_budget_picks,
+    format_budget_picks_html,
     format_combo_deal_markdown,
     format_product_of_the_day,
 )
