@@ -27,7 +27,7 @@ async def send_top5_per_category(fixed=False):
     from modules.utils import deduplicate_variants
     from modules.telegram import send as send_markdown  # ✅ Markdown formatting
     from modules.scraper import scrape_top5_per_category
-    from modules.templates import format_top5_markdown
+    from modules.templates import format_top5_html
     from modules.telegram import send as send_message
     from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
@@ -58,7 +58,7 @@ async def send_top5_per_category(fixed=False):
             continue
 
         message = format_top5_markdown(top5, category_name)
-        await send_message(message, parse_mode="MarkdownV2")
+        await send_message(message, parse_mode="HTML")
 
 
 
@@ -75,9 +75,16 @@ async def send_top5_per_category(fixed=False):
 
 # 💎 Hidden Gem
 async def send_hidden_gem():
+    
+    from modules.telegram import send_photo
+    from modules.utils import escape_markdown
     gem = get_hidden_gem()
-    caption = f"{gem['label']} – *{gem['category']}*\n[Explore on Amazon]({gem['url']})"
-    await send_markdown_message(caption)
+
+    caption = (
+    f"*{escape_markdown(gem['label'])}* – _{escape_markdown(gem['category'])}_\n"
+    f"[Explore on Amazon]({escape_markdown(gem['url'])})"
+    )
+    await send_photo(gem['image'], caption)
 
 
 
