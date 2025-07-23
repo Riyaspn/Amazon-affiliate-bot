@@ -169,7 +169,7 @@ async def get_soup_from_url(url: str):
                 user_agent=USER_AGENT
             )
             page = await context.new_page()
-            await page.goto(url, timeout=60000, wait_until="networkidle")
+            await page.goto(url, timeout=90000, wait_until="domcontentloaded")
             await page.wait_for_selector("div.p13n-sc-uncoverable-faceout", timeout=15000)
             html = await page.content()
             await browser.close()
