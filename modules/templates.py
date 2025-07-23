@@ -63,12 +63,12 @@ def format_budget_picks_html(products):
 def format_hidden_gems(products):
     message = "🧪 *Hidden Gems on Amazon*\n\n"
     for i, p in enumerate(products, start=1):
-        caption = build_photo_caption(p, label_emoji="🧪", title_prefix=f"Hidden Gem #{i}")
+        caption = build_photo_caption(p, label_emoji="🧪", title_prefix=f"Hidden Gem #{i}", category_url=p.get("category_url"))
         message += caption + "\n\n"
     return message.strip()
 
 
-def build_photo_caption(product, label_emoji="🛍️", title_prefix=""):
+def build_photo_caption(product, label_emoji="🛍️", title_prefix="", category_url=None):
     title = escape_markdown(product.get("title", "No Title"))
     url = escape_markdown(product.get("url", ""))
     price = escape_markdown(product.get("price", ""))
@@ -83,7 +83,8 @@ def build_photo_caption(product, label_emoji="🛍️", title_prefix=""):
         caption += f"💳 *{bank_offer}*\n"
     if normal_offer:
         caption += f"💥 *{normal_offer}*\n"
-    caption += f"\n\n🔗 [Explore more in this category]({category_url})"    
+     if category_url:
+        caption += f"\n\n🔗 [Explore more in this category]({escape_markdown(category_url)})"  
     return caption.strip()
 
 def format_product_of_the_day(product, category=""):
