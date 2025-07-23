@@ -20,7 +20,7 @@ def format_price_block(price, mrp, discount):
 
 def format_list_item(i, p):
     title = escape_markdown(p['title'])
-    url = p['url']  # DO NOT escape URL
+    url = p['url']
     price = escape_markdown(p.get('price', ''))
     mrp = escape_markdown(p.get('original_price') or p.get('mrp', ''))
     discount = escape_markdown(p.get('discount', ''))
@@ -28,14 +28,18 @@ def format_list_item(i, p):
     normal_offer = escape_markdown(p.get('normal_offer') or "")
     label = escape_markdown(p.get('label', ''))
 
-    line = f"{i}\\. {label} \\[{title}\\]\\({url}\\)\n"
-    line += format_price_block(price, mrp, discount) + "\n"
+    line = f"{i}. {label} [{title}]({url})\n"
+    if mrp:
+        line += f"💰 *{price}* (MRP: ~{mrp}~ | {discount})\n"
+    else:
+        line += f"💰 *{price}*\n"
     if bank_offer:
         line += f"💳 *{bank_offer}*\n"
     if normal_offer:
         line += f"💥 *{normal_offer}*\n"
-    line += "\n\n"
+    line += "\n"
     return line
+
 
 
 
