@@ -23,41 +23,49 @@ def get_day():
 
 # 🛒 Top 5 Per Category
 
-async def send_top5_per_category(fixed=False):
-    from modules.utils import deduplicate_variants
-    from modules.scraper import scrape_top5_per_category
-    from modules.templates import format_top5_html
-    from modules.telegram import send as send_message
-    from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
+from playwright.async_api import async_playwright
+from modules.utils import deduplicate_variants
+from modules.scraper import scrape_top5_per_category
+from modules.templates import format_top5_html
+from modules.telegram import send as send_message
+from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
-    await send_message("🛒 *Top 5 Per Category*", parse_mode="HTML")
+async def send_top5_per_category(fixed=False):
+    await send_message("🛒 <b>Top 5 Per Category</b>", parse_mode="HTML")
 
     if fixed:
         categories = FIXED_CATEGORIES.items()
     else:
         categories = get_random_rotating_categories(n=3)
 
-    for category_name, category_url in categories:
-        products = await scrape_top5_per_category(
-            category_name=category_name,
-            category_url=category_url,
-            fixed=fixed,
-            max_results=15
-        )
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
 
-        if not products:
-            print(f"⚠️ No products found in {category_name}")
-            continue
+        for category_name, category_url in categories:
+            products = await scrape_top5_per_category(
+                category_name=category_name,
+                category_url=category_url,
+                context=context,  # ✅ context passed here
+                fixed=fixed,
+                max_results=15
+            )
 
-        deduped = deduplicate_variants(products)
-        top5 = deduped[:5]
+            if not products:
+                print(f"⚠️ No products found in {category_name}")
+                continue
 
-        if not top5:
-            print(f"⚠️ No deduplicated products in {category_name}")
-            continue
+            deduped = deduplicate_variants(products)
+            top5 = deduped[:5]
 
-        message = format_top5_html(top5, category_name)
-        await send_message(message, parse_mode="HTML")
+            if not top5:
+                print(f"⚠️ No deduplicated products in {category_name}")
+                continue
+
+            message = format_top5_html(top5, category_name)
+            await send_message(message, parse_mode="HTML")
+
+        await browser.close()
 
 
 
