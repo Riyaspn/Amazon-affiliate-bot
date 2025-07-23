@@ -191,7 +191,7 @@ from modules.utils import deduplicate_variants
 import re
 from modules.utils import get_soup_from_url, convert_price_to_float, deduplicate_variants, ensure_affiliate_tag
 
-async def scrape_top5_per_category(category_name, url, num_products=5, category_url=None):
+async def scrape_top5_per_category(category_name, url, num_products=5, category_url=None, fixed=False):
     print(f"🔍 Scraping Bestsellers: {category_name}")
     soup = await get_soup_from_url(url)
     if soup is None:
