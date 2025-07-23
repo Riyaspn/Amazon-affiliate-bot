@@ -29,15 +29,23 @@ def format_list_item_html(i, p):
     label = p.get('label', '')
 
     line = f"<b>{i}. {label} <a href=\"{url}\">{title}</a></b>\n"
-    if mrp:
-        line += f"💰 <b>{price}</b> (MRP: <s>{mrp}</s> | {discount})\n"
-    else:
+
+    if mrp and price:
+        line += f"💰 <b>{price}</b> (MRP: <s>{mrp}</s>"
+        if discount:
+            line += f" | {discount}"
+        line += ")\n"
+    elif price:
         line += f"💰 <b>{price}</b>\n"
+
     if bank_offer:
         line += f"💳 <b>{bank_offer}</b>\n"
+
     if normal_offer:
         line += f"💥 <b>{normal_offer}</b>\n"
+
     line += "\n"
+
     return line
 
 
