@@ -74,17 +74,13 @@ async def send_top5_per_category(fixed=False):
 
 
 # 💎 Hidden Gem
-async def send_hidden_gem():
-    
-    from modules.telegram import send_photo
-    from modules.utils import escape_markdown
-    gem = get_hidden_gem()
+from modules.templates import build_photo_caption
 
-    caption = (
-    f"*{escape_markdown(gem['label'])}* – _{escape_markdown(gem['category'])}_\n"
-    f"[Explore on Amazon]({escape_markdown(gem['url'])})"
-    )
+async def send_hidden_gem():
+    gem = get_hidden_gem()
+    caption = build_photo_caption(gem)
     await send_photo(gem['image'], caption)
+
 
 
 
@@ -169,21 +165,17 @@ async def send_flash_deals():
 
 
 # 🔍 Product of the Day
+from modules.templates import build_photo_caption
+
 async def send_product_of_day():
     product = await scrape_product_of_the_day()
     if not product:
-        await send_message("🔍 *Book of the Day*\n\nNo product found today.")
+        await send_message("🔍 <b>Book of the Day</b>\n\nNo product found today.", parse_mode="HTML")
         return
 
-    message = (
-        f"🔍 *Book of the Day*\n\n"
-        f"📘 *{product['title']}*\n"
-        f"💰 {product['price']}   ⭐ {product['rating']}\n"
-        f"🔗 [View on Amazon]({product['url']})\n"
-        f"{product['label']}"
-    )
+    caption = build_photo_caption(product, label_emoji="🔍", title_prefix="Book of the Day")
+    await send_photo(product['image'], caption)
 
-    await send_photo(product['image'], message)
 
 
 
