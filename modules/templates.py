@@ -83,7 +83,7 @@ def build_photo_caption(product, label_emoji="🛍️", title_prefix="", categor
         caption += f"💳 *{bank_offer}*\n"
     if normal_offer:
         caption += f"💥 *{normal_offer}*\n"
-     if category_url:
+    if category_url:
         caption += f"\n\n🔗 [Explore more in this category]({escape_markdown(category_url)})"  
     return caption.strip()
 
