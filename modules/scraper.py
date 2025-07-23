@@ -193,7 +193,7 @@ from modules.utils import get_soup_from_url, convert_price_to_float, deduplicate
 
 async def scrape_top5_per_category(category_name, category_url, fixed=False, max_results=15):
     print(f"🔍 Scraping Bestsellers: {category_name}")
-    soup = await get_soup_from_url(url)
+    soup = await get_soup_from_url(category_url)
     if soup is None:
         print(f"⚠️ Failed to fetch page for {category_name}")
         return []
