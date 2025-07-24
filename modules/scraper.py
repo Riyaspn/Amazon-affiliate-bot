@@ -32,7 +32,6 @@ async def extract_product_data(card, context, category_name):
         link_element = await card.query_selector("a.a-link-normal.aok-block")
         url = await link_element.get_attribute("href") if link_element else None
         full_url = f"https://www.amazon.in{url}" if url else None
-
         if not full_url:
             print(f"❌ Invalid URL found for product: {url}")
             return None
@@ -61,34 +60,24 @@ async def extract_product_data(card, context, category_name):
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Open product page for deeper info
+        # Open product page for more info
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # Original Price (strikethrough MRP)
+        # MRP (original price)
         original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
         original_price = await original_price_element.inner_text() if original_price_element else ""
-
-        # Coupon (if present)
-        coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
-        if coupon_element:
-            try:
-                coupon = await coupon_element.inner_text()
-            except:
-                coupon = await coupon_element.get_attribute("value")
-        else:
-            coupon = ""
 
         # Bank Offer
         offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
         bank_offer = await offer_element.inner_text() if offer_element else ""
 
-        # Deal Label (e.g., Deal of the Day)
+        # Deal Label
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-                # Discount calculation
+        # Discount calculation
         discount = ""
         try:
             clean_price = float(price.replace("₹", "").replace(",", "").strip())
@@ -99,7 +88,6 @@ async def extract_product_data(card, context, category_name):
         except Exception as e:
             print(f"⚠️ Could not calculate discount for {title}: {e}")
 
-
         await product_page.close()
 
         return {
@@ -109,7 +97,6 @@ async def extract_product_data(card, context, category_name):
             "price": price.strip(),
             "original_price": original_price.strip(),
             "rating": rating.strip() if rating else "",
-            "coupon": coupon.strip(),
             "bank_offer": bank_offer.strip(),
             "deal": deal.strip(),
             "discount": discount,
