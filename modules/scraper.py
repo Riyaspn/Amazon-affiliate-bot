@@ -37,14 +37,14 @@ async def extract_product_data(card, context, category_name):
             print(f"❌ Invalid URL found for product: {url}")
             return None
 
-        # Title (more specific selector from card)
+        # Title
         title_element = await card.query_selector("._cDEzb_p13n-sc-css-line-clamp-3_g3dy1")
         title = await title_element.inner_text() if title_element else None
         if not title:
             print("❌ Skipping product with missing title.")
             return None
 
-        # Price (current price)
+        # Price
         price_element = await card.query_selector("span._cDEzb_p13n-sc-price_3mJ9Z")
         price = await price_element.inner_text() if price_element else None
         if not price:
@@ -57,21 +57,20 @@ async def extract_product_data(card, context, category_name):
         if not image:
             print(f"⚠️ No image found for product: {title}")
 
-
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Open individual product page
+        # Open product page for deeper info
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # Original price (strikethrough price)
+        # Original Price (strikethrough MRP)
         original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
         original_price = await original_price_element.inner_text() if original_price_element else ""
 
-        # Coupon
+        # Coupon (if present)
         coupon_element = await product_page.query_selector("#vpcButton input, span.a-color-success")
         if coupon_element:
             try:
@@ -81,13 +80,25 @@ async def extract_product_data(card, context, category_name):
         else:
             coupon = ""
 
-        # Bank Offer (Delivery block)
+        # Bank Offer
         offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
         bank_offer = await offer_element.inner_text() if offer_element else ""
 
-        # Deal label (Deal of the Day / Lightning Deal)
+        # Deal Label (e.g., Deal of the Day)
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
+
+                # Discount calculation
+        discount = ""
+        try:
+            clean_price = float(price.replace("₹", "").replace(",", "").strip())
+            clean_original = float(original_price.replace("₹", "").replace(",", "").strip())
+            if clean_original > clean_price:
+                percent = round((clean_original - clean_price) / clean_original * 100)
+                discount = f"{percent}% off"
+        except Exception as e:
+            print(f"⚠️ Could not calculate discount for {title}: {e}")
+
 
         await product_page.close()
 
@@ -101,13 +112,13 @@ async def extract_product_data(card, context, category_name):
             "coupon": coupon.strip(),
             "bank_offer": bank_offer.strip(),
             "deal": deal.strip(),
+            "discount": discount,
             "category": category_name,
         }
 
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
-
 
 
 
