@@ -156,6 +156,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
             "discount": discount,
             "category": category_name,
         }
+    print(f"🧪 Final for {title[:40]}... | Bank: {bank_offer} | Cashback: {normal_offer}")
 
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
@@ -285,6 +286,8 @@ async def scrape_top5_per_category(category_name, category_url, context, fixed=F
         return []
 
     deduped = deduplicate_variants(products)
+    print(f"🧪 {title} | Bank Offer: {bank_offer} | Normal Offer: {normal_offer}")
+
     return deduped[:max_results]
 
 
