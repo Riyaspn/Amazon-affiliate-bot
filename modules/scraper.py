@@ -75,23 +75,29 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Carousel Offer Parsing (Bank + Cashback from all cards)
+        # ✅ Extract Offers from Carousel (Bank + Cashback offers)
         bank_offer = ""
         normal_offer = ""
+
         try:
-            offer_cards = await product_page.locator('#tp-side-sheet-main-section .vsx-offers-desktop-lv__item').all()
-            for card in offer_cards:
-                heading_el = await card.query_selector("h2")
-                content_el = await card.query_selector("p")
-                if heading_el and content_el:
-                    heading = await heading_el.inner_text()
-                    paragraph = await content_el.inner_text()
-                    if "Bank Offer" in heading and not bank_offer:
-                        bank_offer = paragraph.strip()
-                    elif "Cashback" in heading and not normal_offer:
-                        normal_offer = paragraph.strip()
+            await product_page.wait_for_selector('#vse-offers-container', timeout=8000)
+            offer_cards = await product_page.query_selector_all(
+            '#vse-offers-container .vsx-offers-desktop-lv__item p'
+            )
+            if offer_cards:
+                for card in offer_cards:
+                    text = (await card.inner_text()).strip()
+                    if "cashback" in text.lower():
+                        normal_offer = text
+                    elif "bank" in text.lower() or "credit" in text.lower() or "debit" in text.lower():
+                        bank_offer = text
+
+                if not normal_offer and len(offer_cards) > 0:
+                    # Fallback: use first offer as normal if no cashback keyword
+                    normal_offer = await offer_cards[0].inner_text()
         except Exception as e:
-            print(f"⚠️ Error reading carousel offers for {title}: {e}")
+            print(f"⚠️ Could not extract carousel offers for {title}: {e}")
+
 
         # ✅ Discount %
         discount = ""
