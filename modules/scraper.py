@@ -75,29 +75,27 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Extract Offers from Carousel (Bank + Cashback offers)
+        # ✅ Carousel Offers (Bank + Cashback)
         bank_offer = ""
         normal_offer = ""
-
         try:
             await product_page.wait_for_selector('#vse-offers-container', timeout=8000)
-            offer_cards = await product_page.query_selector_all(
-            '#vse-offers-container .vsx-offers-desktop-lv__item p'
-            )
-            if offer_cards:
-                for card in offer_cards:
-                    text = (await card.inner_text()).strip()
-                    if "cashback" in text.lower():
-                        normal_offer = text
-                    elif "bank" in text.lower() or "credit" in text.lower() or "debit" in text.lower():
-                        bank_offer = text
+            carousel_items = await product_page.query_selector_all("#vse-offers-container li.a-carousel-card")
+            for item in carousel_items:
+                title_elem = await item.query_selector("h6.offers-items-title")
+                if not title_elem:
+                    continue
+                title_text = (await title_elem.inner_text()).strip().lower()
 
-                if not normal_offer and len(offer_cards) > 0:
-                    # Fallback: use first offer as normal if no cashback keyword
-                    normal_offer = await offer_cards[0].inner_text()
+                offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
+                offer_text = (await offer_elem.inner_text()).strip() if offer_elem else ""
+
+                if "cashback" in title_text:
+                    normal_offer = offer_text
+                elif "bank" in title_text:
+                    bank_offer = offer_text
         except Exception as e:
             print(f"⚠️ Could not extract carousel offers for {title}: {e}")
-
 
         # ✅ Discount %
         discount = ""
@@ -129,6 +127,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
