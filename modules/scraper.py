@@ -279,7 +279,8 @@ async def scrape_top5_per_category(category_name, category_url, context, fixed=F
             print(f"⚠️ Error extracting product from card: {e}")
             continue
 
-    print(f"🧪 {title} | Bank Offer: {bank_offer} | Normal Offer: {normal_offer}")
+    print(f"🧪 {product['title'][:40]}... | Bank Offer: {product.get('bank_offer')} | Normal Offer: {product.get('normal_offer')}")
+
     await page.close()
 
     if not products:
