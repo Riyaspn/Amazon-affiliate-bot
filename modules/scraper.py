@@ -33,7 +33,7 @@ async def extract_product_data(card, context, category_name):
         url = await link_element.get_attribute("href") if link_element else None
         full_url = f"https://www.amazon.in{url}" if url else None
         if not full_url:
-            print(f"❌ Invalid URL found for product: {url}")
+            print(f"❌ Invalid URL found for product.")
             return None
 
         # Title
@@ -53,27 +53,30 @@ async def extract_product_data(card, context, category_name):
         # Image
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
         image = await img_element.get_attribute("src") if img_element else None
-        if not image:
-            print(f"⚠️ No image found for product: {title}")
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Open product page for more info
+        # Visit product page
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # MRP (original price)
+        # 1️⃣ Try standard MRP (strikethrough price)
         original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
         original_price = await original_price_element.inner_text() if original_price_element else ""
+
+        # 2️⃣ Fallback to aria-hidden MRP
+        if not original_price:
+            fallback_elem = await product_page.query_selector("span[aria-hidden='true']")
+            original_price = await fallback_elem.inner_text() if fallback_elem else ""
 
         # Bank Offer
         offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
         bank_offer = await offer_element.inner_text() if offer_element else ""
 
-        # Deal Label
+        # Deal Label (e.g., Deal of the Day)
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
@@ -97,6 +100,7 @@ async def extract_product_data(card, context, category_name):
             "price": price.strip(),
             "original_price": original_price.strip(),
             "rating": rating.strip() if rating else "",
+            "coupon": "",  # Skipped as per your request
             "bank_offer": bank_offer.strip(),
             "deal": deal.strip(),
             "discount": discount,
@@ -106,6 +110,7 @@ async def extract_product_data(card, context, category_name):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
