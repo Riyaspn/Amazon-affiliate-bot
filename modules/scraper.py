@@ -140,7 +140,8 @@ async def extract_product_data(card, context, category_name, markdown=False):
                     discount = f"{percent}% off"
         except Exception as e:
             print(f"⚠️ Could not calculate discount for {title}: {e}")
-
+            
+        print(f"🧪 Final for {title[:40]}... | Bank: {bank_offer} | Cashback: {normal_offer}")
         await product_page.close()
 
         return {
@@ -156,7 +157,6 @@ async def extract_product_data(card, context, category_name, markdown=False):
             "discount": discount,
             "category": category_name,
         }
-    print(f"🧪 Final for {title[:40]}... | Bank: {bank_offer} | Cashback: {normal_offer}")
 
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
