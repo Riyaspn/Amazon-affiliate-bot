@@ -75,25 +75,46 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Carousel Offers (Bank + Cashback)
+        # ✅ Carousel Offers (Bank + Cashback) via Side Sheet
         bank_offer = ""
         normal_offer = ""
         try:
             await product_page.wait_for_selector('#vse-offers-container', timeout=8000)
             carousel_items = await product_page.query_selector_all("#vse-offers-container li.a-carousel-card")
+
             for item in carousel_items:
                 title_elem = await item.query_selector("h6.offers-items-title")
                 if not title_elem:
                     continue
                 title_text = (await title_elem.inner_text()).strip().lower()
 
-                offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
-                offer_text = (await offer_elem.inner_text()).strip() if offer_elem else ""
+                clickable = await item.query_selector("span.a-declarative")
+                if not clickable:
+                    continue
 
-                if "cashback" in title_text:
-                    normal_offer = offer_text
-                elif "bank" in title_text:
-                    bank_offer = offer_text
+                await clickable.click()
+                try:
+                    await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
+                    offer_blocks = await product_page.query_selector_all(
+                        "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
+                    )
+                    if offer_blocks:
+                        offer_text = (await offer_blocks[0].inner_text()).strip()
+                        if "cashback" in title_text:
+                            normal_offer = offer_text
+                        elif "bank" in title_text or "credit" in title_text or "debit" in title_text:
+                            bank_offer = offer_text
+                except:
+                    print(f"⚠️ Side sheet failed to load for: {title_text}")
+
+                # Close the side sheet (optional)
+                try:
+                    close_btn = await product_page.query_selector("button[aria-label='Close']")
+                    if close_btn:
+                        await close_btn.click()
+                except:
+                    pass
+
         except Exception as e:
             print(f"⚠️ Could not extract carousel offers for {title}: {e}")
 
@@ -127,6 +148,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
