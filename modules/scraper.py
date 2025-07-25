@@ -66,26 +66,32 @@ async def extract_product_data(card, context, category_name):
 
         # ✅ MRP (strikethrough price)
         mrp_element = await product_page.query_selector(
-        'span.basisPrice span.a-price.a-text-price span.a-offscreen'
+            'span.basisPrice span.a-price.a-text-price span.a-offscreen'
         )
         original_price = await mrp_element.inner_text() if mrp_element else ""
-
 
         # ✅ Deal Label
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Bank Offer (get first one only)
+        # ✅ Bank Offer (from side sheet)
         bank_offer = ""
-        bank_offer_block = await product_page.query_selector('#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p')
-        if bank_offer_block:
-            bank_offer = await bank_offer_block.inner_text()
+        try:
+            await product_page.wait_for_selector('#tp-side-sheet-main-section', timeout=8000)
+            bank_offer_block = await product_page.query_selector('//h2[text()="Bank Offer"]/following-sibling::div//p')
+            if bank_offer_block:
+                bank_offer = await bank_offer_block.inner_text()
+        except Exception as e:
+            print(f"⚠️ Bank offer not found or failed to load: {e}")
 
-        # ✅ Normal Offer (from "special offers and product promotions" section)
+        # ✅ Cashback Offer (stored as normal_offer)
         normal_offer = ""
-        special_offer_element = await product_page.query_selector("#quickPromoBucketContent_feature_div ul li")
-        if special_offer_element:
-            normal_offer = await special_offer_element.inner_text()
+        try:
+            cashback_block = await product_page.query_selector('//h2[text()="Cashback"]/following-sibling::div//p')
+            if cashback_block:
+                normal_offer = await cashback_block.inner_text()
+        except Exception as e:
+            print(f"⚠️ Cashback offer not found or failed to load: {e}")
 
         # ✅ Discount %
         discount = ""
@@ -117,6 +123,7 @@ async def extract_product_data(card, context, category_name):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
