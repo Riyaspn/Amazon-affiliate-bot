@@ -54,6 +54,7 @@ def format_list_item_html(i, p):
 
 
 
+
 def format_top5_html(products, category):
     message = f"📦 <b>Top 5 in {category}</b>\n\n"
     for i, p in enumerate(products, start=1):
