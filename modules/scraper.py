@@ -27,7 +27,6 @@ from modules.utils import (
 
 # 🔍 Extract individual product data
 async def extract_product_data(card, context, category_name, markdown=False):
-
     try:
         # Product link
         link_element = await card.query_selector("a.a-link-normal.aok-block")
@@ -53,58 +52,48 @@ async def extract_product_data(card, context, category_name, markdown=False):
             return None
 
         # Image
-        # Image (Markdown optional)
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
         image_url = await img_element.get_attribute("src") if img_element else None
-
-        if markdown and image_url:
-            image = f"[‎]({image_url})"  # invisible alt text for Telegram inline image preview
-        else:
-            image = image_url
-
+        image = f"[‎]({image_url})" if markdown and image_url else image_url
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Open product page for deeper info
+        # Open product page
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # ✅ MRP (true MRP only, skip price-per-unit)
+        # ✅ MRP (actual strikethrough, not unit price)
         mrp_element = await product_page.query_selector(
             'span.basisPrice span.a-price.a-text-price span.a-offscreen'
         )
         original_price = await mrp_element.inner_text() if mrp_element else ""
 
-        # ✅ Deal Label (if any)
+        # ✅ Deal Label (e.g., "Deal of the Day")
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Bank Offer (from side sheet, even if hidden)
+        # ✅ Carousel Offer Parsing (Bank + Cashback from all cards)
         bank_offer = ""
-        try:
-            offer_locator = product_page.locator(
-                '//h2[contains(text(),"Bank Offer")]/following-sibling::div//p'
-            )
-            if await offer_locator.count() > 0:
-                bank_offer = await offer_locator.nth(0).inner_text()
-        except Exception as e:
-            print(f"⚠️ Bank offer not found or failed to load for {title}: {e}")
-
-        # ✅ Cashback Offer (stored as normal_offer)
         normal_offer = ""
         try:
-            cashback_locator = product_page.locator(
-                '//h2[contains(text(),"Cashback")]/following-sibling::div//p'
-            )
-            if await cashback_locator.count() > 0:
-                normal_offer = await cashback_locator.nth(0).inner_text()
+            offer_cards = await product_page.locator('#tp-side-sheet-main-section .vsx-offers-desktop-lv__item').all()
+            for card in offer_cards:
+                heading_el = await card.query_selector("h2")
+                content_el = await card.query_selector("p")
+                if heading_el and content_el:
+                    heading = await heading_el.inner_text()
+                    paragraph = await content_el.inner_text()
+                    if "Bank Offer" in heading and not bank_offer:
+                        bank_offer = paragraph.strip()
+                    elif "Cashback" in heading and not normal_offer:
+                        normal_offer = paragraph.strip()
         except Exception as e:
-            print(f"⚠️ Cashback offer not found or failed to load for {title}: {e}")
+            print(f"⚠️ Error reading carousel offers for {title}: {e}")
 
-        # ✅ Discount % calculation
+        # ✅ Discount %
         discount = ""
         try:
             clean_price = float(price.replace("₹", "").replace(",", "").strip())
@@ -124,8 +113,8 @@ async def extract_product_data(card, context, category_name, markdown=False):
             "price": price.strip(),
             "original_price": original_price.strip(),
             "rating": rating.strip() if rating else "",
-            "bank_offer": bank_offer.strip(),
-            "normal_offer": normal_offer.strip(),
+            "bank_offer": bank_offer,
+            "normal_offer": normal_offer,
             "deal": deal.strip(),
             "discount": discount,
             "category": category_name,
@@ -134,6 +123,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
