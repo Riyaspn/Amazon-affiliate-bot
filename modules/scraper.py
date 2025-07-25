@@ -26,7 +26,8 @@ from modules.utils import (
 )
 
 # 🔍 Extract individual product data
-async def extract_product_data(card, context, category_name):
+async def extract_product_data(card, context, category_name, markdown=False):
+
     try:
         # Product link
         link_element = await card.query_selector("a.a-link-normal.aok-block")
@@ -52,8 +53,15 @@ async def extract_product_data(card, context, category_name):
             return None
 
         # Image
+        # Image (Markdown optional)
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
-        image = await img_element.get_attribute("src") if img_element else None
+        image_url = await img_element.get_attribute("src") if img_element else None
+
+        if markdown and image_url:
+            image = f"[‎]({image_url})"  # invisible alt text for Telegram inline image preview
+        else:
+            image = image_url
+
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
@@ -64,36 +72,39 @@ async def extract_product_data(card, context, category_name):
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # ✅ MRP (strikethrough price)
+        # ✅ MRP (true MRP only, skip price-per-unit)
         mrp_element = await product_page.query_selector(
             'span.basisPrice span.a-price.a-text-price span.a-offscreen'
         )
         original_price = await mrp_element.inner_text() if mrp_element else ""
 
-        # ✅ Deal Label
+        # ✅ Deal Label (if any)
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Bank Offer (from side sheet)
+        # ✅ Bank Offer (from side sheet, even if hidden)
         bank_offer = ""
         try:
-            await product_page.wait_for_selector('#tp-side-sheet-main-section', timeout=8000)
-            bank_offer_block = await product_page.query_selector('//h2[text()="Bank Offer"]/following-sibling::div//p')
-            if bank_offer_block:
-                bank_offer = await bank_offer_block.inner_text()
+            offer_locator = product_page.locator(
+                '//h2[contains(text(),"Bank Offer")]/following-sibling::div//p'
+            )
+            if await offer_locator.count() > 0:
+                bank_offer = await offer_locator.nth(0).inner_text()
         except Exception as e:
-            print(f"⚠️ Bank offer not found or failed to load: {e}")
+            print(f"⚠️ Bank offer not found or failed to load for {title}: {e}")
 
         # ✅ Cashback Offer (stored as normal_offer)
         normal_offer = ""
         try:
-            cashback_block = await product_page.query_selector('//h2[text()="Cashback"]/following-sibling::div//p')
-            if cashback_block:
-                normal_offer = await cashback_block.inner_text()
+            cashback_locator = product_page.locator(
+                '//h2[contains(text(),"Cashback")]/following-sibling::div//p'
+            )
+            if await cashback_locator.count() > 0:
+                normal_offer = await cashback_locator.nth(0).inner_text()
         except Exception as e:
-            print(f"⚠️ Cashback offer not found or failed to load: {e}")
+            print(f"⚠️ Cashback offer not found or failed to load for {title}: {e}")
 
-        # ✅ Discount %
+        # ✅ Discount % calculation
         discount = ""
         try:
             clean_price = float(price.replace("₹", "").replace(",", "").strip())
@@ -123,6 +134,7 @@ async def extract_product_data(card, context, category_name):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
