@@ -64,11 +64,17 @@ async def extract_product_data(card, context, category_name, markdown=False):
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
+        await product_page.wait_for_timeout(3000)  # Allow dynamic content to load
 
         # ✅ MRP (actual strikethrough, not unit price)
         mrp_element = await product_page.query_selector(
             'span.basisPrice span.a-price.a-text-price span.a-offscreen'
         )
+        if not mrp_element:
+            # Fallback for simpler layout
+            mrp_element = await product_page.query_selector(
+                'span.a-price.a-text-price span.a-offscreen'
+            )
         original_price = await mrp_element.inner_text() if mrp_element else ""
 
         # ✅ Deal Label (e.g., "Deal of the Day")
@@ -84,7 +90,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 await vse_container.scroll_into_view_if_needed()
                 await product_page.wait_for_timeout(1000)
 
-                carousel_items = await product_page.query_selector_all("#vse-offers-container li.a-carousel-card")
+                carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
                 for item in carousel_items:
                     title_elem = await item.query_selector("h6.offers-items-title")
                     if not title_elem:
@@ -126,11 +132,12 @@ async def extract_product_data(card, context, category_name, markdown=False):
         # ✅ Discount %
         discount = ""
         try:
-            clean_price = float(price.replace("₹", "").replace(",", "").strip())
-            clean_original = float(original_price.replace("₹", "").replace(",", "").strip())
-            if clean_original > clean_price:
-                percent = round((clean_original - clean_price) / clean_original * 100)
-                discount = f"{percent}% off"
+            if price and original_price:
+                clean_price = float(price.replace("₹", "").replace(",", "").strip())
+                clean_original = float(original_price.replace("₹", "").replace(",", "").strip())
+                if clean_original > clean_price:
+                    percent = round((clean_original - clean_price) / clean_original * 100)
+                    discount = f"{percent}% off"
         except Exception as e:
             print(f"⚠️ Could not calculate discount for {title}: {e}")
 
@@ -153,6 +160,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
