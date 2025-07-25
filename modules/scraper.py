@@ -64,56 +64,65 @@ async def extract_product_data(card, context, category_name, markdown=False):
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
-        await product_page.wait_for_timeout(3000)  # Let dynamic content settle
+        await product_page.wait_for_timeout(3000)
 
-        # ✅ MRP (strikethrough)
-        mrp_element = await product_page.query_selector(
-            'span.basisPrice span.a-price.a-text-price span.a-offscreen'
-        )
+        # MRP
+        mrp_element = await product_page.query_selector('span.basisPrice span.a-price.a-text-price span.a-offscreen')
         if not mrp_element:
-            mrp_element = await product_page.query_selector(
-                'span.a-price.a-text-price span.a-offscreen'
-            )
+            mrp_element = await product_page.query_selector('span.a-price.a-text-price span.a-offscreen')
         original_price = await mrp_element.inner_text() if mrp_element else ""
 
-        # ✅ Deal Label (e.g., "Deal of the Day")
+        # Deal Label
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # ✅ Carousel Offers (Bank + Cashback)
+        # Bank & Cashback Offers via Side Sheet
         bank_offer = ""
         normal_offer = ""
         try:
             vse_container = await product_page.query_selector('#vse-offers-container')
             if vse_container:
                 await vse_container.scroll_into_view_if_needed()
-                await product_page.wait_for_timeout(2000)
+                await product_page.wait_for_timeout(1000)
 
                 carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
                 for item in carousel_items:
                     try:
                         title_elem = await item.query_selector("h6.offers-items-title")
-                        offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
+                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
 
-                        if not title_elem or not offer_elem:
-                            continue
+                        # Click trigger
+                        click_trigger = await item.query_selector("span.a-declarative")
+                        if click_trigger:
+                            await click_trigger.click()
+                            await product_page.wait_for_timeout(1500)
+                            await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
 
-                        title_text = (await title_elem.inner_text()).strip().lower()
-                        offer_text = (await offer_elem.inner_text()).strip()
+                            # Extract from side sheet
+                            offer_blocks = await product_page.query_selector_all(
+                                "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
+                            )
+                            offer_text = (await offer_blocks[0].inner_text()).strip() if offer_blocks else ""
 
-                        if "cashback" in title_text and not normal_offer:
-                            normal_offer = offer_text
-                        elif ("bank" in title_text or "credit" in title_text or "debit" in title_text) and not bank_offer:
-                            bank_offer = offer_text
+                            if "cashback" in title_text and not normal_offer:
+                                normal_offer = offer_text
+                            elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer:
+                                bank_offer = offer_text
 
-                        print(f"🔎 Carousel: {title_text} → {offer_text}")
+                            print(f"🔎 Modal: {title_text} → {offer_text}")
 
-                    except Exception as inner_e:
-                        print(f"⚠️ Failed parsing carousel item: {inner_e}")
+                            # Close modal
+                            close_btn = await product_page.query_selector("button[aria-label='Close']")
+                            if close_btn:
+                                await close_btn.click()
+                                await product_page.wait_for_timeout(500)
+
+                    except Exception as e:
+                        print(f"⚠️ Offer modal failed: {e}")
         except Exception as e:
-            print(f"⚠️ Could not extract carousel offers for {title[:40]}: {e}")
+            print(f"⚠️ Carousel extraction error for {title[:40]}: {e}")
 
-        # ✅ Discount %
+        # Discount Calculation
         discount = ""
         try:
             if price and original_price:
@@ -123,7 +132,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
                     percent = round((clean_original - clean_price) / clean_original * 100)
                     discount = f"{percent}% off"
         except Exception as e:
-            print(f"⚠️ Could not calculate discount for {title[:40]}: {e}")
+            print(f"⚠️ Discount error for {title[:40]}: {e}")
 
         print(f"🧪 Final for {title[:40]}... | Bank: {bank_offer} | Cashback: {normal_offer}")
         await product_page.close()
@@ -145,6 +154,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
