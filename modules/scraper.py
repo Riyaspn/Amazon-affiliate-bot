@@ -76,7 +76,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # Bank & Cashback Offers via Side Sheet
+        # Bank & Cashback Offers via Modal
         bank_offer = ""
         normal_offer = ""
         try:
@@ -91,18 +91,18 @@ async def extract_product_data(card, context, category_name, markdown=False):
                         title_elem = await item.query_selector("h6.offers-items-title")
                         title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
 
-                        # Click trigger
+                        # Click to open side sheet
                         click_trigger = await item.query_selector("span.a-declarative")
                         if click_trigger:
                             await click_trigger.click()
                             await product_page.wait_for_timeout(1500)
                             await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
 
-                            # Extract from side sheet
                             offer_blocks = await product_page.query_selector_all(
                                 "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
                             )
-                            offer_text = (await offer_blocks[0].inner_text()).strip() if offer_blocks else ""
+                            all_offer_texts = [await o.inner_text() for o in offer_blocks]
+                            offer_text = all_offer_texts[0].strip() if all_offer_texts else ""
 
                             if "cashback" in title_text and not normal_offer:
                                 normal_offer = offer_text
