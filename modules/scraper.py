@@ -32,6 +32,7 @@ async def extract_product_data(card, context, category_name):
         link_element = await card.query_selector("a.a-link-normal.aok-block")
         url = await link_element.get_attribute("href") if link_element else None
         full_url = f"https://www.amazon.in{url}" if url else None
+
         if not full_url:
             print(f"❌ Invalid URL found for product: {url}")
             return None
@@ -53,43 +54,40 @@ async def extract_product_data(card, context, category_name):
         # Image
         img_element = await card.query_selector("img.p13n-sc-dynamic-image")
         image = await img_element.get_attribute("src") if img_element else None
-        if not image:
-            print(f"⚠️ No image found for product: {title}")
 
         # Rating
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Visit product page
+        # Open product page for deeper info
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # MRP (strikethrough)
-        original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
-        if not original_price_element:
-            # fallback MRP span with aria-hidden
-            original_price_element = await product_page.query_selector('span[aria-hidden="true"]')
-        original_price = await original_price_element.inner_text() if original_price_element else ""
+        # ✅ MRP (strikethrough price)
+        mrp_element = await product_page.query_selector(
+        'span.basisPrice span.a-price.a-text-price span.a-offscreen'
+        )
+        original_price = await mrp_element.inner_text() if mrp_element else ""
 
-        # Deal label (e.g. Deal of the Day)
+
+        # ✅ Deal Label
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # Bank Offer (Delivery Block)
-        offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
-        bank_offer = await offer_element.inner_text() if offer_element else ""
+        # ✅ Bank Offer (get first one only)
+        bank_offer = ""
+        bank_offer_block = await product_page.query_selector('#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p')
+        if bank_offer_block:
+            bank_offer = await bank_offer_block.inner_text()
 
-        # Cashback / other normal offers
+        # ✅ Normal Offer (from "special offers and product promotions" section)
         normal_offer = ""
-        cashback_container = await product_page.query_selector('#tp-side-sheet-main-section')
-        if cashback_container:
-            cashback_paras = await cashback_container.query_selector_all("p")
-            if cashback_paras:
-                texts = [await p.inner_text() for p in cashback_paras if p]
-                normal_offer = texts[0].strip() if texts else ""
+        special_offer_element = await product_page.query_selector("#quickPromoBucketContent_feature_div ul li")
+        if special_offer_element:
+            normal_offer = await special_offer_element.inner_text()
 
-        # Calculate discount %
+        # ✅ Discount %
         discount = ""
         try:
             clean_price = float(price.replace("₹", "").replace(",", "").strip())
@@ -110,9 +108,9 @@ async def extract_product_data(card, context, category_name):
             "original_price": original_price.strip(),
             "rating": rating.strip() if rating else "",
             "bank_offer": bank_offer.strip(),
+            "normal_offer": normal_offer.strip(),
             "deal": deal.strip(),
             "discount": discount,
-            "normal_offer": normal_offer,
             "category": category_name,
         }
 
