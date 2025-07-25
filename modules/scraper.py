@@ -279,6 +279,7 @@ async def scrape_top5_per_category(category_name, category_url, context, fixed=F
             print(f"⚠️ Error extracting product from card: {e}")
             continue
 
+    print(f"🧪 {title} | Bank Offer: {bank_offer} | Normal Offer: {normal_offer}")
     await page.close()
 
     if not products:
@@ -286,7 +287,6 @@ async def scrape_top5_per_category(category_name, category_url, context, fixed=F
         return []
 
     deduped = deduplicate_variants(products)
-    print(f"🧪 {title} | Bank Offer: {bank_offer} | Normal Offer: {normal_offer}")
 
     return deduped[:max_results]
 
