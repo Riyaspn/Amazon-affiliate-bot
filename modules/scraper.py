@@ -60,43 +60,36 @@ async def extract_product_data(card, context, category_name):
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # Open product page for deeper info
+        # Visit product page
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
 
-        # --- Original Price (MRP) ---
-        original_price = ""
-        try:
-            original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
-            if original_price_element:
-                original_price = await original_price_element.inner_text()
-            else:
-                fallback_mrp_element = await product_page.query_selector("span.a-price.a-text-price span[aria-hidden='true']")
-                if fallback_mrp_element:
-                    original_price = await fallback_mrp_element.inner_text()
-        except:
-            original_price = ""
+        # MRP (strikethrough)
+        original_price_element = await product_page.query_selector("span.a-price.a-text-price span.a-offscreen")
+        if not original_price_element:
+            # fallback MRP span with aria-hidden
+            original_price_element = await product_page.query_selector('span[aria-hidden="true"]')
+        original_price = await original_price_element.inner_text() if original_price_element else ""
 
-        # --- Bank Offer ---
-        bank_offer = ""
-        try:
-            bank_offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
-            if bank_offer_element:
-                bank_offer = await bank_offer_element.inner_text()
-        except:
-            bank_offer = ""
+        # Deal label (e.g. Deal of the Day)
+        deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
+        deal = await deal_element.inner_text() if deal_element else ""
 
-        # --- Deal Label (e.g., Deal of the Day) ---
-        deal = ""
-        try:
-            deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
-            if deal_element:
-                deal = await deal_element.inner_text()
-        except:
-            deal = ""
+        # Bank Offer (Delivery Block)
+        offer_element = await product_page.query_selector("div#mir-layout-DELIVERY_BLOCK-slot-PRIMARY_DELIVERY_MESSAGE span")
+        bank_offer = await offer_element.inner_text() if offer_element else ""
 
-        # --- Discount Calculation ---
+        # Cashback / other normal offers
+        normal_offer = ""
+        cashback_container = await product_page.query_selector('#tp-side-sheet-main-section')
+        if cashback_container:
+            cashback_paras = await cashback_container.query_selector_all("p")
+            if cashback_paras:
+                texts = [await p.inner_text() for p in cashback_paras if p]
+                normal_offer = texts[0].strip() if texts else ""
+
+        # Calculate discount %
         discount = ""
         try:
             clean_price = float(price.replace("₹", "").replace(",", "").strip())
@@ -119,6 +112,7 @@ async def extract_product_data(card, context, category_name):
             "bank_offer": bank_offer.strip(),
             "deal": deal.strip(),
             "discount": discount,
+            "normal_offer": normal_offer,
             "category": category_name,
         }
 
