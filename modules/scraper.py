@@ -32,7 +32,6 @@ async def extract_product_data(card, context, category_name, markdown=False):
         link_element = await card.query_selector("a.a-link-normal.aok-block")
         url = await link_element.get_attribute("href") if link_element else None
         full_url = f"https://www.amazon.in{url}" if url else None
-
         if not full_url:
             print(f"❌ Invalid URL found for product: {url}")
             return None
@@ -76,15 +75,15 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # Bank & Cashback Offers via Modal
+        # --- Scrape Bank & Cashback Offers from Modal ---
         bank_offer = ""
         normal_offer = ""
+
         try:
             vse_container = await product_page.query_selector('#vse-offers-container')
             if vse_container:
                 await vse_container.scroll_into_view_if_needed()
                 await product_page.wait_for_timeout(1000)
-
                 carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
                 print(f"🌀 Found {len(carousel_items)} carousel items for {title[:40]}")
 
@@ -94,23 +93,25 @@ async def extract_product_data(card, context, category_name, markdown=False):
                         title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
                         print(f"📌 Offer Type: {title_text}")
 
-                        # Click to open modal
+                        # Click carousel item to open modal
                         click_trigger = await item.query_selector("span.a-declarative")
                         if click_trigger:
                             await click_trigger.click()
                             print(f"✅ Clicked: {title_text}")
                             await product_page.wait_for_timeout(2000)
 
-                            # Wait for modal to appear
+                            # Wait for modal
                             await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
                             print("✅ Modal appeared")
 
+                            # Extract offers
                             offer_blocks = await product_page.query_selector_all(
                                 "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
                             )
                             all_offer_texts = [await o.inner_text() async for o in offer_blocks]
                             print(f"📥 Extracted offers: {all_offer_texts}")
 
+                            # Save the first relevant offer only
                             if "cashback" in title_text and not normal_offer and all_offer_texts:
                                 normal_offer = all_offer_texts[0].strip()
                             elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
@@ -160,6 +161,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
