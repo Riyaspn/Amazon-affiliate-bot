@@ -63,6 +63,10 @@ async def extract_product_data(card, context, category_name, markdown=False):
         product_page = await context.new_page()
         await product_page.goto(full_url, timeout=60000)
         await product_page.wait_for_load_state("load")
+        await product_page.wait_for_timeout(2000)
+
+        # ✅ Trigger JS lazy load for offer section
+        await product_page.mouse.wheel(0, 10000)
         await product_page.wait_for_timeout(3000)
 
         # MRP
@@ -83,7 +87,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
             vse_container = await product_page.query_selector('#vse-offers-container')
             if vse_container:
                 await vse_container.scroll_into_view_if_needed()
-                await product_page.wait_for_timeout(1500)
+                await product_page.wait_for_timeout(1000)
                 print(f"🎯 Found offer carousel for: {title[:40]}")
 
                 carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
@@ -163,6 +167,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
