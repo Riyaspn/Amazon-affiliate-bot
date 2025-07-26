@@ -65,7 +65,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
         await product_page.wait_for_load_state("load")
         await product_page.wait_for_timeout(2000)
 
-        # Scroll to trigger carousel load
+        # Scroll to trigger JS offer hydration
         await product_page.keyboard.press("End")
         await product_page.wait_for_timeout(3000)
 
@@ -79,78 +79,102 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # --- Offers ---
+        # --- Offers Section ---
         bank_offer = ""
         normal_offer = ""
 
+        # ✅ Try JS variable scraping first
         try:
-            vse_container = await product_page.query_selector('#vse-offers-container')
-            if vse_container:
-                await product_page.evaluate("""
-                    const el = document.querySelector('#vse-offers-container');
-                    if (el && window.getComputedStyle(el).display === 'none') {
-                        el.style.display = 'block';
+            js_offer_data = await product_page.evaluate("""
+                () => {
+                    try {
+                        const offers = window?.vseOfferState?.offersDesktopLv || window?.weblab?.vseOfferState?.offersDesktopLv;
+                        if (!offers) return [];
+                        return Object.values(offers).map(o => ({
+                            title: o?.offerHeader?.title || "",
+                            text: o?.offerDetails?.text || ""
+                        }));
+                    } catch (e) {
+                        return [];
                     }
-                """)
-                await vse_container.scroll_into_view_if_needed()
-                await product_page.wait_for_timeout(1500)
-                print(f"🎯 Found offer carousel for: {title[:40]}")
+                }
+            """)
+            print(f"🧠 JS offers extracted: {js_offer_data}")
 
-                carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
-                print(f"🌀 Total carousel items: {len(carousel_items)}")
+            for offer in js_offer_data:
+                offer_title = offer["title"].lower()
+                offer_text = offer["text"].strip()
 
-                for item in carousel_items:
-                    try:
-                        title_elem = await item.query_selector("h6.offers-items-title")
-                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
-                        print(f"📌 Carousel Label: {title_text}")
-
-                        # First try to extract the visible offer without opening modal
-                        visible_offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
-                        visible_offer = (await visible_offer_elem.inner_text()).strip() if visible_offer_elem else ""
-
-                        if "cashback" in title_text and not normal_offer and visible_offer:
-                            normal_offer = visible_offer
-                        elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and visible_offer:
-                            bank_offer = visible_offer
-
-                        # If not yet set, try modal scraping
-                        if (not bank_offer or not normal_offer):
-                            click_trigger = await item.query_selector("span.a-declarative")
-                            if click_trigger:
-                                await click_trigger.click()
-                                print(f"✅ Clicked on: {title_text}")
-                                await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
-                                await product_page.wait_for_timeout(1500)
-
-                                offer_blocks = await product_page.query_selector_all(
-                                    "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
-                                )
-                                print(f"🔍 Found {len(offer_blocks)} offer blocks in modal")
-
-                                all_offer_texts = [await o.inner_text() async for o in offer_blocks]
-                                print(f"📥 Offer Texts: {all_offer_texts}")
-
-                                if "cashback" in title_text and not normal_offer and all_offer_texts:
-                                    normal_offer = all_offer_texts[0].strip()
-                                elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
-                                    bank_offer = all_offer_texts[0].strip()
-
-                                close_btn = await product_page.query_selector("button[aria-label='Close']")
-                                if close_btn:
-                                    await close_btn.click()
-                                    await product_page.wait_for_timeout(800)
-                                    print("❎ Modal closed")
-
-                    except Exception as e:
-                        print(f"⚠️ Modal scraping failed for item: {e}")
-            else:
-                print(f"❌ No offer carousel found for: {title[:40]}")
+                if "cashback" in offer_title and not normal_offer:
+                    normal_offer = offer_text
+                elif any(w in offer_title for w in ["bank", "credit", "debit"]) and not bank_offer:
+                    bank_offer = offer_text
 
         except Exception as e:
-            print(f"⚠️ Error accessing carousel/modal for: {title[:40]} | {e}")
+            print(f"⚠️ JS-based offer scraping failed: {e}")
 
-        # Discount
+        # 🔁 Fallback to carousel/modal if still missing
+        if not bank_offer or not normal_offer:
+            try:
+                vse_container = await product_page.query_selector('#vse-offers-container')
+                if vse_container:
+                    await product_page.evaluate("""
+                        const el = document.querySelector('#vse-offers-container');
+                        if (el && window.getComputedStyle(el).display === 'none') {
+                            el.style.display = 'block';
+                        }
+                    """)
+                    await vse_container.scroll_into_view_if_needed()
+                    await product_page.wait_for_timeout(1500)
+                    print(f"🎯 Found fallback offer carousel for: {title[:40]}")
+
+                    carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
+                    print(f"🌀 Total carousel items: {len(carousel_items)}")
+
+                    for item in carousel_items:
+                        try:
+                            title_elem = await item.query_selector("h6.offers-items-title")
+                            title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
+
+                            visible_offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
+                            visible_offer = (await visible_offer_elem.inner_text()).strip() if visible_offer_elem else ""
+
+                            if "cashback" in title_text and not normal_offer and visible_offer:
+                                normal_offer = visible_offer
+                            elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and visible_offer:
+                                bank_offer = visible_offer
+
+                            if (not bank_offer or not normal_offer):
+                                click_trigger = await item.query_selector("span.a-declarative")
+                                if click_trigger:
+                                    await click_trigger.click()
+                                    print(f"✅ Clicked on: {title_text}")
+                                    await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
+                                    await product_page.wait_for_timeout(1500)
+
+                                    offer_blocks = await product_page.query_selector_all(
+                                        "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
+                                    )
+                                    all_offer_texts = [await o.inner_text() async for o in offer_blocks]
+
+                                    if "cashback" in title_text and not normal_offer and all_offer_texts:
+                                        normal_offer = all_offer_texts[0].strip()
+                                    elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
+                                        bank_offer = all_offer_texts[0].strip()
+
+                                    close_btn = await product_page.query_selector("button[aria-label='Close']")
+                                    if close_btn:
+                                        await close_btn.click()
+                                        await product_page.wait_for_timeout(800)
+                                        print("❎ Modal closed")
+                        except Exception as e:
+                            print(f"⚠️ Carousel modal scraping failed: {e}")
+                else:
+                    print(f"❌ No offer carousel DOM found for: {title[:40]}")
+            except Exception as e:
+                print(f"⚠️ Error in carousel fallback: {e}")
+
+        # Final Discount Calculation
         discount = ""
         try:
             if price and original_price:
@@ -182,7 +206,6 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
-
 
 
 
