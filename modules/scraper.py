@@ -76,9 +76,10 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # Bank & Cashback Offers (without clicking)
         bank_offer = ""
         normal_offer = ""
+
+        # Carousel logic - click and open modal
         try:
             vse_container = await product_page.query_selector('#vse-offers-container')
             if vse_container:
@@ -88,23 +89,30 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
                 print(f"🌀 Found {len(carousel_items)} carousel items for {title[:40]}")
 
-                for item in carousel_items:
+                for index, item in enumerate(carousel_items):
                     try:
-                        title_elem = await item.query_selector("h6.offers-items-title")
-                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
+                        await item.scroll_into_view_if_needed()
+                        await item.click(timeout=5000)
+                        await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=8000)
 
-                        offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
-                        offer_text = (await offer_elem.inner_text()).strip() if offer_elem else ""
+                        offer_blocks = await product_page.query_selector_all("div.vsx-offers-desktop-lv__item > p")
+                        for offer_block in offer_blocks:
+                            offer_text = (await offer_block.inner_text()).strip()
+                            lower_offer = offer_text.lower()
 
-                        print(f"🔎 {title_text} → {offer_text}")
+                            if any(keyword in lower_offer for keyword in ["cashback", "reward", "upi", "amazon pay"]):
+                                normal_offer = normal_offer or offer_text
+                            elif any(word in lower_offer for word in ["bank", "credit", "debit", "card"]):
+                                bank_offer = bank_offer or offer_text
 
-                        if "cashback" in title_text and not normal_offer:
-                            normal_offer = offer_text
-                        elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer:
-                            bank_offer = offer_text
+                        # Close modal
+                        close_btn = await product_page.query_selector("#tp-side-sheet .a-icon-close")
+                        if close_btn:
+                            await close_btn.click()
+                            await product_page.wait_for_timeout(1000)
 
                     except Exception as e:
-                        print(f"⚠️ Failed parsing carousel item: {e}")
+                        print(f"⚠️ Failed carousel modal extraction for item {index}: {e}")
         except Exception as e:
             print(f"⚠️ Carousel section error for {title[:40]}: {e}")
 
@@ -140,6 +148,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
