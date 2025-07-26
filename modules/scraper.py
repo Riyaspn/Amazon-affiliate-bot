@@ -65,8 +65,8 @@ async def extract_product_data(card, context, category_name, markdown=False):
         await product_page.wait_for_load_state("load")
         await product_page.wait_for_timeout(2000)
 
-        # ✅ Trigger JS lazy load for offer section
-        await product_page.mouse.wheel(0, 10000)
+        # ✅ Scroll to trigger JS loading of carousel
+        await product_page.keyboard.press("End")
         await product_page.wait_for_timeout(3000)
 
         # MRP
@@ -79,61 +79,67 @@ async def extract_product_data(card, context, category_name, markdown=False):
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # --- Scrape Bank & Cashback Offers from Modal ---
+        # --- Scrape Offers ---
         bank_offer = ""
         normal_offer = ""
 
         try:
+            # Wait & patch offer container if hidden
+            await product_page.wait_for_selector('#vse-offers-container', timeout=5000)
             vse_container = await product_page.query_selector('#vse-offers-container')
-            if vse_container:
-                await vse_container.scroll_into_view_if_needed()
-                await product_page.wait_for_timeout(1000)
-                print(f"🎯 Found offer carousel for: {title[:40]}")
 
-                carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
-                print(f"🌀 Total carousel items: {len(carousel_items)}")
+            # Force it visible if hidden by Amazon CSS
+            await product_page.evaluate("""
+                const el = document.querySelector('#vse-offers-container');
+                if (el && window.getComputedStyle(el).display === 'none') {
+                    el.style.display = 'block';
+                }
+            """)
 
-                for item in carousel_items:
-                    try:
-                        title_elem = await item.query_selector("h6.offers-items-title")
-                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
-                        print(f"📌 Carousel Label: {title_text}")
+            await vse_container.scroll_into_view_if_needed()
+            await product_page.wait_for_timeout(1500)
+            print(f"🎯 Found offer carousel for: {title[:40]}")
 
-                        click_trigger = await item.query_selector("span.a-declarative")
-                        if click_trigger:
-                            await click_trigger.click()
-                            print(f"✅ Clicked on: {title_text}")
-                            await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
-                            await product_page.wait_for_timeout(1500)
+            carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
+            print(f"🌀 Total carousel items: {len(carousel_items)}")
 
-                            offer_blocks = await product_page.query_selector_all(
-                                "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
-                            )
-                            print(f"🔍 Found {len(offer_blocks)} offer blocks in modal")
+            for item in carousel_items:
+                try:
+                    title_elem = await item.query_selector("h6.offers-items-title")
+                    title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
+                    print(f"📌 Carousel Label: {title_text}")
 
-                            all_offer_texts = [await o.inner_text() async for o in offer_blocks]
-                            print(f"📥 Offer Texts: {all_offer_texts}")
+                    click_trigger = await item.query_selector("span.a-declarative")
+                    if click_trigger:
+                        await click_trigger.click()
+                        print(f"✅ Clicked on: {title_text}")
+                        await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
+                        await product_page.wait_for_timeout(1500)
 
-                            if "cashback" in title_text and not normal_offer and all_offer_texts:
-                                normal_offer = all_offer_texts[0].strip()
-                            elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
-                                bank_offer = all_offer_texts[0].strip()
+                        offer_blocks = await product_page.query_selector_all(
+                            "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
+                        )
+                        print(f"🔍 Found {len(offer_blocks)} offer blocks in modal")
 
-                            # Close modal
-                            close_btn = await product_page.query_selector("button[aria-label='Close']")
-                            if close_btn:
-                                await close_btn.click()
-                                await product_page.wait_for_timeout(800)
-                                print("❎ Modal closed")
+                        all_offer_texts = [await o.inner_text() async for o in offer_blocks]
+                        print(f"📥 Offer Texts: {all_offer_texts}")
 
-                    except Exception as e:
-                        print(f"⚠️ Modal scraping failed for item: {e}")
+                        if "cashback" in title_text and not normal_offer and all_offer_texts:
+                            normal_offer = all_offer_texts[0].strip()
+                        elif any(word in title_text for word in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
+                            bank_offer = all_offer_texts[0].strip()
 
-            else:
-                print(f"❌ No offer carousel found for: {title[:40]}")
+                        close_btn = await product_page.query_selector("button[aria-label='Close']")
+                        if close_btn:
+                            await close_btn.click()
+                            await product_page.wait_for_timeout(800)
+                            print("❎ Modal closed")
+
+                except Exception as e:
+                    print(f"⚠️ Modal scraping failed for item: {e}")
 
         except Exception as e:
-            print(f"⚠️ Error accessing carousel or modal for: {title[:40]} | {e}")
+            print(f"❌ No offer carousel found for: {title[:40]} | {e}")
 
         # Discount Calculation
         discount = ""
@@ -167,6 +173,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
     except Exception as e:
         print(f"❌ Error extracting data for product: {e}")
         return None
+
 
 
 
