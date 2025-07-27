@@ -177,15 +177,31 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 for block in all_offer_blocks:
                     try:
                         paragraphs = await block.query_selector_all("p")
-                        for para in paragraphs:
-                            text = (await para.inner_text()).strip()
-                            lower_text = text.lower()
-                            print(f"📝 Paragraph Text: {text}")
-        
-                            if "cashback" in lower_text and not normal_offer:
-                                normal_offer = text
-                            elif any(w in lower_text for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                                bank_offer = text
+                
+                        if paragraphs:
+                            for para in paragraphs:
+                                text = (await para.inner_text()).strip()
+                                lower_text = text.lower()
+                                print(f"📝 Paragraph Text: {text}")
+                
+                                if "cashback" in lower_text and not normal_offer:
+                                    normal_offer = text
+                                elif any(w in lower_text for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                                    bank_offer = text
+                        else:
+                            # fallback to raw inner_text if <p> tags are absent
+                            block_text = (await block.inner_text()).strip()
+                            lower_block = block_text.lower()
+                            print(f"📝 Block Text:\n{block_text}")
+                
+                            if "cashback" in lower_block and not normal_offer:
+                                normal_offer = block_text
+                            elif any(w in lower_block for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                                bank_offer = block_text
+                
+                    except Exception as e:
+                        print(f"⚠️ Static <p> block parse error: {e}")
+
         
                     except Exception as e:
                         print(f"⚠️ Static <p> block parse error: {e}")
