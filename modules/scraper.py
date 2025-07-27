@@ -169,32 +169,36 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 print(f"⚠️ Carousel fallback error: {e}")
 
         # ✅ (3) Fallback: STATIC hidden DOM blocks
+        # ✅ (3) Fallback: STATIC hidden DOM blocks
         if not bank_offer or not normal_offer:
             try:
                 all_offer_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
                 print(f"🧱 Found static DOM offer blocks: {len(all_offer_blocks)}")
+        
                 for block in all_offer_blocks:
-                    block_texts = await block.query_selector_all(".vsx-offers-desktop-lv__item p")
-                    texts = []
-                    for t in block_texts:
-                        try:
-                            txt = await t.inner_text()
-                            if txt.strip():
-                                texts.append(txt.strip())
-                        except:
+                    try:
+                        # Collect all visible text under this block
+                        block_text = await block.inner_text()
+                        if not block_text:
                             continue
-
-                    if not texts:
-                        continue
-                    for text in texts:
-                        lower_text = text.lower()
-                        if "cashback" in lower_text and not normal_offer:
-                            normal_offer = text
-                        elif any(w in lower_text for w in ["Offer 1", "bank", "credit", "debit", "upi", "insta"]) and not bank_offer:
-                            bank_offer = text
-
+        
+                        # Debug full raw offer block
+                        print(f"📝 Block Text:\n{block_text}")
+        
+                        lower_block = block_text.lower()
+        
+                        # Match keywords anywhere in the block
+                        if "cashback" in lower_block and not normal_offer:
+                            normal_offer = block_text.strip()
+                        elif any(word in lower_block for word in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                            bank_offer = block_text.strip()
+        
+                    except Exception as e:
+                        print(f"⚠️ Static block inner_text parse error: {e}")
+        
             except Exception as e:
                 print(f"⚠️ Static block fallback error: {e}")
+
 
         # Discount Calculation
         discount = ""
