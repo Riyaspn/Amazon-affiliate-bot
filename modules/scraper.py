@@ -175,7 +175,15 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 print(f"🧱 Found static DOM offer blocks: {len(all_offer_blocks)}")
                 for block in all_offer_blocks:
                     block_texts = await block.query_selector_all(".vsx-offers-desktop-lv__item p")
-                    texts = [await t.inner_text() async for t in block_texts if await t.inner_text()]
+                    texts = []
+                    for t in block_texts:
+                        try:
+                            txt = await t.inner_text()
+                            if txt.strip():
+                                texts.append(txt.strip())
+                        except:
+                            continue
+
                     if not texts:
                         continue
                     first = texts[0].lower()
