@@ -80,7 +80,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
         # === 🟡 OFFERS SECTION ===
         bank_offer = ""
         normal_offer = ""
-
+        
         # ✅ (1) JS offer object
         try:
             js_offer_data = await product_page.evaluate("""
@@ -98,7 +98,7 @@ async def extract_product_data(card, context, category_name, markdown=False):
                 }
             """)
             print(f"🧠 JS offers extracted: {js_offer_data}")
-
+        
             for offer in js_offer_data:
                 t = offer["title"].lower()
                 text = offer["text"].strip()
@@ -106,10 +106,10 @@ async def extract_product_data(card, context, category_name, markdown=False):
                     normal_offer = text
                 elif any(k in t for k in ["bank", "credit", "debit"]) and not bank_offer:
                     bank_offer = text
-
+        
         except Exception as e:
             print(f"⚠️ JS offer scrape error: {e}")
-
+        
         # ✅ (2) Fallback: Offer carousel modal
         if not bank_offer or not normal_offer:
             try:
@@ -123,40 +123,40 @@ async def extract_product_data(card, context, category_name, markdown=False):
                     """)
                     await vse_container.scroll_into_view_if_needed()
                     await product_page.wait_for_timeout(1500)
-
+        
                     carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
                     print(f"🌀 Carousel items: {len(carousel_items)}")
-
+        
                     for item in carousel_items:
                         try:
                             title_elem = await item.query_selector("h6.offers-items-title")
                             title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
-
+        
                             visible_offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
                             visible_offer = (await visible_offer_elem.inner_text()).strip() if visible_offer_elem else ""
-
+        
                             if "cashback" in title_text and not normal_offer and visible_offer:
                                 normal_offer = visible_offer
                             elif any(k in title_text for k in ["bank", "credit", "debit"]) and not bank_offer and visible_offer:
                                 bank_offer = visible_offer
-
+        
                             if (not bank_offer or not normal_offer):
                                 click_trigger = await item.query_selector("span.a-declarative")
                                 if click_trigger:
                                     await click_trigger.click()
                                     await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
                                     await product_page.wait_for_timeout(1500)
-
+        
                                     offer_blocks = await product_page.query_selector_all(
                                         "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
                                     )
                                     all_offer_texts = [await o.inner_text() async for o in offer_blocks]
-
+        
                                     if "cashback" in title_text and not normal_offer and all_offer_texts:
                                         normal_offer = all_offer_texts[0].strip()
                                     elif any(k in title_text for k in ["bank", "credit", "debit"]) and not bank_offer and all_offer_texts:
                                         bank_offer = all_offer_texts[0].strip()
-
+        
                                     close_btn = await product_page.query_selector("button[aria-label='Close']")
                                     if close_btn:
                                         await close_btn.click()
@@ -167,9 +167,8 @@ async def extract_product_data(card, context, category_name, markdown=False):
                     print(f"❌ No carousel found for: {title[:40]}")
             except Exception as e:
                 print(f"⚠️ Carousel fallback error: {e}")
-
-        # ✅ (3) Fallback: STATIC hidden DOM blocks
-        # ✅ (3) Fallback: STATIC hidden DOM blocks
+        
+        # ✅ (3) Fallback: STATIC hidden DOM blocks (improved version)
         if not bank_offer or not normal_offer:
             try:
                 all_offer_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
@@ -177,27 +176,23 @@ async def extract_product_data(card, context, category_name, markdown=False):
         
                 for block in all_offer_blocks:
                     try:
-                        # Collect all visible text under this block
-                        block_text = await block.inner_text()
-                        if not block_text:
-                            continue
+                        paragraphs = await block.query_selector_all("p")
+                        for para in paragraphs:
+                            text = (await para.inner_text()).strip()
+                            lower_text = text.lower()
+                            print(f"📝 Paragraph Text: {text}")
         
-                        # Debug full raw offer block
-                        print(f"📝 Block Text:\n{block_text}")
-        
-                        lower_block = block_text.lower()
-        
-                        # Match keywords anywhere in the block
-                        if "cashback" in lower_block and not normal_offer:
-                            normal_offer = block_text.strip()
-                        elif any(word in lower_block for word in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                            bank_offer = block_text.strip()
+                            if "cashback" in lower_text and not normal_offer:
+                                normal_offer = text
+                            elif any(w in lower_text for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                                bank_offer = text
         
                     except Exception as e:
-                        print(f"⚠️ Static block inner_text parse error: {e}")
+                        print(f"⚠️ Static <p> block parse error: {e}")
         
             except Exception as e:
                 print(f"⚠️ Static block fallback error: {e}")
+
 
 
         # Discount Calculation
