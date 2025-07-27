@@ -186,11 +186,13 @@ async def extract_product_data(card, context, category_name, markdown=False):
 
                     if not texts:
                         continue
-                    first = texts[0].lower()
-                    if "cashback" in first and not normal_offer:
-                        normal_offer = texts[0].strip()
-                    elif any(w in first for w in ["bank", "credit", "debit"]) and not bank_offer:
-                        bank_offer = texts[0].strip()
+                    for text in texts:
+                        lower_text = text.lower()
+                        if "cashback" in lower_text and not normal_offer:
+                            normal_offer = text
+                        elif any(w in lower_text for w in ["Offer 1", "bank", "credit", "debit", "upi", "insta"]) and not bank_offer:
+                            bank_offer = text
+
             except Exception as e:
                 print(f"⚠️ Static block fallback error: {e}")
 
