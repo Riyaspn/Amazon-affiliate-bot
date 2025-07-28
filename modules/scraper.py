@@ -85,47 +85,52 @@ async def extract_product_data(card, context, category_name, markdown=False):
             vse_container = await product_page.query_selector('#vse-offers-container')
             if vse_container:
                 await vse_container.scroll_into_view_if_needed()
-                await product_page.wait_for_timeout(1500)
+                await product_page.wait_for_timeout(1000)
 
                 carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
-                print(f"🌀 Carousel offer items: {len(carousel_items)}")
+                print(f"🌀 Found {len(carousel_items)} offer cards in carousel")
 
-                for item in carousel_items:
+                for idx, item in enumerate(carousel_items):
                     try:
-                        await item.scroll_into_view_if_needed()
+                        # Click the card to open modal
                         click_trigger = await item.query_selector("span.a-declarative")
                         if click_trigger:
                             await click_trigger.click()
                             await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=5000)
-                            await product_page.wait_for_timeout(1500)
+                            await product_page.wait_for_timeout(1000)
 
-                            offer_blocks = await product_page.query_selector_all("#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p")
-                            offers = [await o.inner_text() async for o in offer_blocks]
-                            print(f"📜 Modal offer block texts: {offers}")
+                            offer_blocks = await product_page.query_selector_all(
+                                "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
+                            )
+                            offer_texts = [await p.inner_text() async for p in offer_blocks]
+                            print(f"📦 Offer modal {idx+1} returned {len(offer_texts)} lines")
 
-                            for text in offers:
-                                t = text.lower()
-                                if "cashback" in t and not normal_offer:
-                                    normal_offer = text
-                                elif any(k in t for k in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                                    bank_offer = text
+                            for offer in offer_texts:
+                                o_lower = offer.lower()
+                                if "cashback" in o_lower and not normal_offer:
+                                    normal_offer = offer.strip()
+                                elif any(k in o_lower for k in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                                    bank_offer = offer.strip()
 
-                            # Close modal
+                            # Close the modal
                             close_btn = await product_page.query_selector("button[aria-label='Close']")
                             if close_btn:
                                 await close_btn.click()
                                 await product_page.wait_for_timeout(800)
 
                         if bank_offer and normal_offer:
-                            break
+                            break  # Got both, no need to continue
 
                     except Exception as e:
-                        print(f"⚠️ Offer card modal error: {e}")
+                        print(f"⚠️ Modal click or parse error: {e}")
             else:
-                print("❌ No offer carousel container found.")
+                print(f"❌ No offer carousel container found.")
 
         except Exception as e:
-            print(f"⚠️ Final offer modal click strategy failed: {e}")
+            print(f"⚠️ Offer scraping fatal error: {e}")
+
+        print(f"🧪 Final Offers | Bank: {bank_offer} | Cashback: {normal_offer}")
+
 
 
         # ✅ (2) Fallback: Offer carousel modal
