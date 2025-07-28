@@ -188,40 +188,34 @@ async def extract_product_data(card, context, category_name, markdown=False):
             except Exception as e:
                 print(f"⚠️ Carousel fallback error: {e}")
 
-        # ✅ (3) Fallback: STATIC hidden DOM blocks (improved version)
+        # ✅ (3) Fallback: STATIC hidden DOM blocks (final version)
         if not bank_offer or not normal_offer:
             try:
                 all_offer_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
                 print(f"🧱 Found static DOM offer blocks: {len(all_offer_blocks)}")
-
+        
                 for block in all_offer_blocks:
                     try:
-                        paragraphs = await block.query_selector_all("p")
-                        if paragraphs:
-                            for para in paragraphs:
-                                text = (await para.inner_text()).strip()
-                                lower_text = text.lower()
-                                print(f"📝 Paragraph Text: {text}")
-
-                                if "cashback" in lower_text and not normal_offer:
-                                    normal_offer = text
-                                elif any(w in lower_text for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                                    bank_offer = text
-                        else:
-                            block_text = (await block.inner_text()).strip()
-                            lower_block = block_text.lower()
-                            print(f"📝 Block Text:\n{block_text}")
-
-                            if "cashback" in lower_block and not normal_offer:
-                                normal_offer = block_text
-                            elif any(w in lower_block for w in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                                bank_offer = block_text
-
+                        title_elem = await block.query_selector("h1")
+                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
+        
+                        para_elems = await block.query_selector_all("p")
+                        para_texts = [await p.inner_text() for p in para_elems]
+        
+                        print(f"🧾 Block: {title_text} | Offer lines: {para_texts}")
+        
+                        for line in para_texts:
+                            l = line.strip().lower()
+                            if "cashback" in title_text and not normal_offer:
+                                normal_offer = line.strip()
+                            elif any(k in title_text for k in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
+                                bank_offer = line.strip()
+        
                     except Exception as e:
                         print(f"⚠️ Static <p> block parse error: {e}")
-
             except Exception as e:
                 print(f"⚠️ Static block fallback error: {e}")
+
 
 
 
