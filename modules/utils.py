@@ -179,13 +179,22 @@ async def get_soup_from_url(url: str):
         return None
 
 async def get_browser_context(browser_type):
+    import os
+    storage_file = "amazon_storage.json"
+
+    context_args = {
+        "viewport": {"width": 1280, "height": 800},
+        "java_script_enabled": True,
+        "user_agent": USER_AGENT
+    }
+
+    if os.path.exists(storage_file):
+        context_args["storage_state"] = storage_file
+
     browser = await browser_type.launch(headless=True)
-    context = await browser.new_context(
-        viewport={"width": 1280, "height": 800},
-        java_script_enabled=True,
-        user_agent=USER_AGENT
-    )
+    context = await browser.new_context(**context_args)
     return browser, context
+
 
 def get_browser_type(playwright):
     import os
