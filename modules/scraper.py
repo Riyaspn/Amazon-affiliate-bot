@@ -26,9 +26,11 @@ from modules.utils import (
 )
 
 # 🔍 Extract individual product data
+from utils import ensure_affiliate_tag, convert_price_to_float, format_offer_line
+
 async def extract_product_data(card, context, category_name, markdown=False, detail_page=None):
     try:
-        # Basic product info from card
+        # === CARD ELEMENTS ===
         link_element = await card.query_selector("a.a-link-normal.aok-block")
         url = await link_element.get_attribute("href") if link_element else None
         full_url = ensure_affiliate_tag(f"https://www.amazon.in{url}") if url else None
@@ -52,23 +54,21 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else None
 
-        # === Load detail page ===
+        # === DETAIL PAGE ===
         product_page = detail_page or await context.new_page()
         await product_page.goto(full_url, timeout=20000)
         await product_page.wait_for_load_state("domcontentloaded")
         await product_page.keyboard.press("End")
         await product_page.wait_for_timeout(1000)
 
-        # Price/MRP
         mrp_element = await product_page.query_selector('span.basisPrice span.a-price.a-text-price span.a-offscreen') \
                       or await product_page.query_selector('span.a-price.a-text-price span.a-offscreen')
         original_price = await mrp_element.inner_text() if mrp_element else ""
 
-        # Deal tag
         deal_element = await product_page.query_selector('[id^="100_dealView_"] .a-text-bold')
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # === OFFERS: Cashback & Bank ===
+        # === OFFERS: Bank & Cashback ===
         bank_offer, normal_offer = "", ""
 
         try:
@@ -83,7 +83,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         except Exception as e:
             print(f"⚠️ Offer span error: {e}")
 
-        # Fallback 1: Carousel modal
+        # === Fallback: Modal carousel ===
         if not bank_offer or not normal_offer:
             try:
                 vse_container = await product_page.query_selector('#vse-offers-container')
@@ -98,7 +98,6 @@ async def extract_product_data(card, context, category_name, markdown=False, det
                     await product_page.wait_for_timeout(800)
 
                     carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
-
                     for item in carousel_items:
                         title_elem = await item.query_selector("h6.offers-items-title")
                         title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
@@ -136,7 +135,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
             except Exception as e:
                 print(f"⚠️ Carousel fallback error: {e}")
 
-        # Fallback 2: Static offer blocks
+        # === Fallback: Static offer blocks ===
         if not bank_offer or not normal_offer:
             try:
                 offer_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
@@ -154,19 +153,24 @@ async def extract_product_data(card, context, category_name, markdown=False, det
             except Exception as e:
                 print(f"⚠️ Static offer block error: {e}")
 
-        # Discount
+        if not detail_page:
+            await product_page.close()
+
+        # === Discount Calculation ===
         discount = ""
         try:
-            if price and original_price:
-                p = float(price.replace("₹", "").replace(",", ""))
-                op = float(original_price.replace("₹", "").replace(",", ""))
-                if op > p:
-                    discount = f"{round((op - p) / op * 100)}% off"
+            p = convert_price_to_float(price)
+            op = convert_price_to_float(original_price)
+            if op > p:
+                discount = f"{round((op - p) / op * 100)}% off"
         except:
             pass
 
-        if not detail_page:
-            await product_page.close()
+        # === Format Clean Offer Line ===
+        offer_text = format_offer_line({
+            "bank_offer": bank_offer,
+            "normal_offer": normal_offer
+        })
 
         return {
             "title": title.strip(),
@@ -177,6 +181,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
             "rating": rating.strip() if rating else "",
             "bank_offer": bank_offer,
             "normal_offer": normal_offer,
+            "clean_offer": offer_text,
             "deal": deal.strip(),
             "discount": discount,
             "category": category_name,
