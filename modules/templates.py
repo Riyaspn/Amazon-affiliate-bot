@@ -45,7 +45,11 @@ def format_list_item_html(i, p):
         line += f"⚡ <b>{deal}</b>\n"
 
     # 🆕 Combine bank + normal offer smartly
-    offer_line = format_offer_line(bank_offer, normal_offer)
+    offer_line = format_offer_line({
+    "bank_offer": bank_offer,
+    "normal_offer": normal_offer
+    })
+
     if offer_line:
         line += f"💳 <b>{offer_line}</b>\n"
 
