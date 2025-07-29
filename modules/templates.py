@@ -33,17 +33,20 @@ def format_list_item_html(i, p):
     label_str = f"{label} " if label else ""
     line = f"<b>{i}. {label_str}{title}</b>\n"
 
+    # 💰 Price block
     if mrp and price:
-        line += f"💰 {price} (MRP: {mrp}"
+        line += f"💰 {price} (MRP: <s>{mrp}</s>"
         if discount:
-            line += f" | {discount}"
+            line += f" | 🔻<b>{discount}</b>"
         line += ")\n"
     elif price:
         line += f"💰 {price}\n"
 
+    # ⚡ Deal
     if deal:
         line += f"⚡ {deal}\n"
 
+    # 💳 and 💥 Offers
     if bank_offer or normal_offer:
         offer_line = format_offer_line({
             "bank_offer": bank_offer,
@@ -52,8 +55,10 @@ def format_list_item_html(i, p):
         if offer_line:
             line += f"{offer_line}\n"
 
+    # 🛒 Buy Now
     line += f"🛒 <a href=\"{url}\">Buy Now</a>\n\n"
     return line
+
 
 
 
