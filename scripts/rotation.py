@@ -30,6 +30,8 @@ from modules.templates import format_top5_html
 from modules.telegram import send as send_message
 from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
+from modules.utils import deduplicate_variants, get_browser_context  # ✅ import
+
 async def send_top5_per_category(fixed=False):
     await send_message("🛒 <b>Top 5 Per Category</b>", parse_mode="HTML")
 
@@ -39,14 +41,14 @@ async def send_top5_per_category(fixed=False):
         categories = get_random_rotating_categories(n=3)
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
+        browser_type = get_browser_type(p)  # ✅ choose chromium/firefox based on env
+        browser, context = await get_browser_context(browser_type)  # ✅ use persistent session
 
         for category_name, category_url in categories:
             products = await scrape_top5_per_category(
                 category_name=category_name,
                 category_url=category_url,
-                context=context,  # ✅ context passed here
+                context=context,
                 fixed=fixed,
                 max_results=15
             )
@@ -66,6 +68,7 @@ async def send_top5_per_category(fixed=False):
             await send_message(message, parse_mode="HTML")
 
         await browser.close()
+
 
 
 
