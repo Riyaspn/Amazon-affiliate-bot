@@ -201,3 +201,29 @@ def get_browser_type(playwright):
     if os.getenv("GITHUB_ACTIONS") == "true":
         return playwright.chromium
     return playwright.firefox
+
+def format_offer_line(product):
+    bank = product.get("bank_offer", "").strip()
+    cashback = product.get("normal_offer", "").strip()
+
+    bank_val = ""
+    cashback_val = ""
+
+    # Extract numeric values using regex
+    import re
+    bank_match = re.search(r'₹\s?([\d,]+)', bank)
+    cashback_match = re.search(r'₹\s?([\d,]+)', cashback)
+
+    if bank_match:
+        bank_val = f"₹{bank_match.group(1).replace(',', '')}"
+    if cashback_match:
+        cashback_val = f"₹{cashback_match.group(1).replace(',', '')}"
+
+    if bank_val and cashback_val:
+        return f"💳 {bank_val} off + {cashback_val} cashback with select cards"
+    elif bank_val:
+        return f"💳 {bank_val} off on select cards"
+    elif cashback_val:
+        return f"💥 {cashback_val} cashback"
+    else:
+        return ""  # No valid offer text
