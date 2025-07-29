@@ -31,12 +31,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install chromium  # ⚡️ Fast, Chromium-only
+          python -m playwright install chromium
           pip install httpx
+
       - name: Decode Amazon Storage and Save
         run: |
-          echo "${{ secrets.AMAZON_STORAGE_BASE64 }}" | base64 -d > amazon_storage.json
-          
+          echo "${{ secrets.AMAZON_STORAGE_BASE64 }}" | base64 --decode > amazon_storage.json
 
       - name: Run main.py
         env:
