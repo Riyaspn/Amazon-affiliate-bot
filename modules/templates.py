@@ -1,5 +1,5 @@
 import random
-from modules.utils import escape_markdown
+from modules.utils import escape_markdown, format_offer_line 
 
 def format_price_block(price, mrp, discount):
     block = ""
@@ -16,6 +16,7 @@ def format_price_block(price, mrp, discount):
             block += ", "
         block += f"Now at ₹{price}"
     return block
+
 
 
 def format_list_item_html(i, p):
@@ -42,13 +43,15 @@ def format_list_item_html(i, p):
 
     if deal:
         line += f"⚡ <b>{deal}</b>\n"
-    if bank_offer:
-        line += f"💳 <b>{bank_offer}</b>\n"
-    if normal_offer:
-        line += f"💥 <b>{normal_offer}</b>\n"
+
+    # 🆕 Combine bank + normal offer smartly
+    offer_line = format_offer_line(bank_offer, normal_offer)
+    if offer_line:
+        line += f"💳 <b>{offer_line}</b>\n"
 
     line += "\n"
     return line
+
 
 
 
