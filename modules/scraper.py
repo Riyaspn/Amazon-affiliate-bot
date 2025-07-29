@@ -22,7 +22,7 @@ from modules.utils import (
     convert_price_to_float,
     ensure_affiliate_tag,
     get_browser_type,
-    USER_AGENT,
+    USER_AGENT
 )
 
 # 🔍 Extract individual product data
@@ -31,7 +31,8 @@ async def extract_product_data(card, context, category_name, markdown=False):
         # Product link
         link_element = await card.query_selector("a.a-link-normal.aok-block")
         url = await link_element.get_attribute("href") if link_element else None
-        full_url = f"https://www.amazon.in{url}" if url else None
+        full_url = ensure_affiliate_tag(f"https://www.amazon.in{url}") if url else None
+
         if not full_url:
             print(f"❌ Invalid URL found for product: {url}")
             return None
