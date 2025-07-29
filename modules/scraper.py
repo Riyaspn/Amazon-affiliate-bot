@@ -9,24 +9,17 @@ from modules.utils import (
     ensure_affiliate_tag,
     get_browser_type,
     USER_AGENT,
-    deduplicate_variants
+    deduplicate_variants,
+    format_offer_line
 )
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, unquote
-
-
 import random
 import asyncio
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
-from modules.utils import (
-    convert_price_to_float,
-    ensure_affiliate_tag,
-    get_browser_type,
-    USER_AGENT
-)
+
 
 # 🔍 Extract individual product data
-from utils import ensure_affiliate_tag, convert_price_to_float, format_offer_line
+
 
 async def extract_product_data(card, context, category_name, markdown=False, detail_page=None):
     try:
