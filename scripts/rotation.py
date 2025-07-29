@@ -24,13 +24,12 @@ def get_day():
 # 🛒 Top 5 Per Category
 
 from playwright.async_api import async_playwright
-from modules.utils import deduplicate_variants
 from modules.scraper import scrape_top5_per_category
 from modules.templates import format_top5_html
 from modules.telegram import send as send_message
 from modules.categories import FIXED_CATEGORIES, get_random_rotating_categories
 
-from modules.utils import deduplicate_variants, get_browser_context  # ✅ import
+from modules.utils import deduplicate_variants, get_browser_context, get_browser_type
 
 async def send_top5_per_category(fixed=False):
     await send_message("🛒 <b>Top 5 Per Category</b>", parse_mode="HTML")
