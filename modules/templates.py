@@ -35,12 +35,12 @@ def format_list_item_html(i, p):
 
     # 💰 Price block
     if mrp and price:
-        line += f"💰 {price} (MRP: <s>{mrp}</s>"
+        line += f"💰 <b>{price}<b> (MRP: <s>{mrp}</s>"
         if discount:
             line += f" | 🔻<b>{discount}</b>"
         line += ")\n"
     elif price:
-        line += f"💰 {price}\n"
+        line += f"💰 <b>{price}<b>\n"
 
     # ⚡ Deal
     if deal:
