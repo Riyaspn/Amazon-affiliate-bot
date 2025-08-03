@@ -369,15 +369,11 @@ from modules.utils import get_browser_type
 
 # Optional: pass label for product's category_name
 async def scrape_hidden_gem(category_url, label="Hidden Gem"):
-    """
-    Scrapes one product (with image) from the supplied hidden gem category URL.
-    Returns: (label, [product_dict]) or (label, []) if none found.
-    """
     url = category_url
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser, context = await get_browser_context(browser_type)  # <-- Proper unpack
+        browser, context = await get_browser_context(browser_type)
         page = await context.new_page()
 
         try:
@@ -388,12 +384,12 @@ async def scrape_hidden_gem(category_url, label="Hidden Gem"):
                 print("No product cards found.")
                 return label, []
 
-            random.shuffle(cards)  # Adds randomness for variety
+            random.shuffle(cards)
 
             for card in cards:
                 product = await extract_product_data(card, context, label)
-                # Ensure product has an image and key details
                 if product and product.get("image"):
+                    product["category_url"] = url  # <---- THIS ENSURES category_url PRESENT!
                     await browser.close()
                     return label, [product]
 
@@ -405,11 +401,8 @@ async def scrape_hidden_gem(category_url, label="Hidden Gem"):
         finally:
             await browser.close()
 
-    # If we reach here, nothing was found
     return label, []
 
-
-    return label, []
 
 
 
