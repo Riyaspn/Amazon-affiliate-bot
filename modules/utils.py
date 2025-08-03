@@ -226,4 +226,6 @@ def format_offer_line(product):
     elif cashback_val:
         return f"💥 {cashback_val} cashback"
     else:
-        return ""  # No valid offer text
+        return ""  # No valid offer text 
+
+
