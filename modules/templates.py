@@ -107,6 +107,10 @@ def build_photo_caption(product, category_url=None):
     discount   = esc(product.get("discount", ""))
     bank_offer = product.get("bank_offer", "")
     normal_offer = product.get("normal_offer", "")
+    offer_line = format_offer_line({
+        "bank_offer": bank_offer,
+        "normal_offer": normal_offer
+    })
     cat_url    = esc(category_url) if category_url else None
 
     lines = [f"*{title}*"]
@@ -118,19 +122,15 @@ def build_photo_caption(product, category_url=None):
         price_line += "\\)"
     lines.append(price_line)
 
-    # This will add offers as a single line, just like Top 5
-    offer_msg = format_offer_line({
-        "bank_offer": bank_offer,
-        "normal_offer": normal_offer
-    })
-    if offer_msg:
-        lines.append(esc(offer_msg))
+    if offer_line:
+        lines.append(esc(offer_line))
 
     if url:
         lines.append(f"🛒 [Buy Now]({url})")
     if cat_url:
         lines.append(f"🔗 [Explore more in this category]({cat_url})")
     return "\n".join(lines).strip()
+
 
 
 
@@ -171,6 +171,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
