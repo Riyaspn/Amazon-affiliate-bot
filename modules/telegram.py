@@ -49,7 +49,7 @@ async def send_photo(photo_url: str, caption: str):
         "chat_id": CHAT_ID,
         "photo": photo_url,
         "caption": caption,
-        "parse_mode": "Markdown",  # Markdown is best supported in photo captions
+        "parse_mode": "MarkdownV2",   # ← use MarkdownV2!
         "disable_web_page_preview": True
     }
 
