@@ -116,8 +116,9 @@ def build_photo_caption(product, category_url=None):
     if mrp and mrp != price:
         price_line += f" \\(MRP: ~{mrp}~"
         if discount:
-            price_line += f" | {discount}"
+            price_line += f" \\| {discount}"   # ADD the backslash before |
         price_line += "\\)"
+
     lines.append(price_line)
     if offers:
         lines.append(offers)
@@ -167,5 +168,6 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
