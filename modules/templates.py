@@ -95,39 +95,41 @@ def format_hidden_gems(products):
     return message.strip()
 
 def build_photo_caption(product, category_url=None):
-    # Inline escape for clarity
+    # Strict MarkdownV2 escape
     def esc(text):
         if not text: return ""
         escape_chars = r"\_*[]()~`>#+-=|{}.!"
         return ''.join(['\\' + c if c in escape_chars else c for c in text])
     
-    title   = esc(product.get("title", "No Title"))
-    url     = esc(product.get("url", ""))
-    price   = esc(product.get("price", ""))
-    mrp     = esc(product.get("original_price") or product.get("mrp", ""))
-    discount= esc(product.get("discount", ""))
+    title      = esc(product.get("title", "No Title"))
+    url        = esc(product.get("url", ""))
+    price      = esc(product.get("price", ""))
+    mrp        = esc(product.get("original_price") or product.get("mrp", ""))
+    discount   = esc(product.get("discount", ""))
+    # Optionally combine both, or just bank_offer if you want
     bank_offer = esc(product.get("bank_offer", ""))
     normal_offer = esc(product.get("normal_offer", ""))
-    offers = " ".join([bank_offer, normal_offer]).strip()
-    cat_url = esc(category_url) if category_url else None
+    offers     = " ".join([bank_offer, normal_offer]).strip()
 
     lines = [f"{title}"]
     price_line = price
     if mrp and mrp != price:
-        price_line += f" (MRP: ~{mrp}~"
+        price_line += f" \\(MRP: ~{mrp}~"
         if discount:
             price_line += f" | {discount}"
-        price_line += ")"
+        price_line += "\\)"
     lines.append(price_line)
     if offers:
         lines.append(offers)
     if url:
         lines.append(f"[Buy Now]({url})")
-    if cat_url:
+    # Optionally add category link as a last line if you want
+    if category_url:
+        cat_url = esc(category_url)
         lines.append(f"[Explore more in this category]({cat_url})")
 
-    # Join with real line breaks
     return "\n".join(lines).strip()
+
 
 
 def format_product_of_the_day(product, category=""):
@@ -165,4 +167,5 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
