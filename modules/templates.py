@@ -86,31 +86,49 @@ def format_budget_picks_html(products):
 
 
 def format_hidden_gems(products):
+    # Header (optional, or you can remove for solo products)
     message = "🧪 *Hidden Gems on Amazon*\n\n"
     for i, p in enumerate(products, start=1):
-        caption = build_photo_caption(p, label_emoji="🧪", title_prefix=f"Hidden Gem #{i}", category_url=p.get("category_url"))
+        # Call the new version of build_photo_caption
+        caption = build_photo_caption(p, category_url=p.get("category_url"))
         message += caption + "\n\n"
     return message.strip()
 
+def build_photo_caption(product, category_url=None):
+    # Inline escape for clarity
+    def esc(text):
+        if not text: return ""
+        escape_chars = r"\_*[]()~`>#+-=|{}.!"
+        return ''.join(['\\' + c if c in escape_chars else c for c in text])
+    
+    title   = esc(product.get("title", "No Title"))
+    url     = esc(product.get("url", ""))
+    price   = esc(product.get("price", ""))
+    mrp     = esc(product.get("original_price") or product.get("mrp", ""))
+    discount= esc(product.get("discount", ""))
+    bank_offer = esc(product.get("bank_offer", ""))
+    normal_offer = esc(product.get("normal_offer", ""))
+    offers = " ".join([bank_offer, normal_offer]).strip()
+    cat_url = esc(category_url) if category_url else None
 
-def build_photo_caption(product, label_emoji="🛍️", title_prefix="", category_url=None):
-    title = escape_markdown(product.get("title", "No Title"))
-    url = escape_markdown(product.get("url", ""))
-    price = escape_markdown(product.get("price", ""))
-    mrp = escape_markdown(product.get("original_price") or product.get("mrp", ""))
-    discount = escape_markdown(product.get("discount", ""))
-    bank_offer = escape_markdown(product.get("bank_offer", ""))
-    normal_offer = escape_markdown(product.get("normal_offer", ""))
+    lines = [f"{title}"]
+    price_line = price
+    if mrp and mrp != price:
+        price_line += f" (MRP: ~{mrp}~"
+        if discount:
+            price_line += f" | {discount}"
+        price_line += ")"
+    lines.append(price_line)
+    if offers:
+        lines.append(offers)
+    if url:
+        lines.append(f"[Buy Now]({url})")
+    if cat_url:
+        lines.append(f"[Explore more in this category]({cat_url})")
 
-    caption = f"{label_emoji} {escape_markdown(title_prefix)} *[{title}]({url})*\n\n"
-    caption += format_price_block(price, mrp, discount) + "\n"
-    if bank_offer:
-        caption += f"💳 *{bank_offer}*\n"
-    if normal_offer:
-        caption += f"💥 *{normal_offer}*\n"
-    if category_url:
-        caption += f"\n\n🔗 [Explore more in this category]({escape_markdown(category_url)})"  
-    return caption.strip()
+    # Join with real line breaks
+    return "\n".join(lines).strip()
+
 
 def format_product_of_the_day(product, category=""):
     prefix = f"🎯 Product of the Day – {escape_markdown(category)}" if category else "🎯 Product of the Day"
@@ -147,3 +165,4 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
