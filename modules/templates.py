@@ -105,38 +105,33 @@ def build_photo_caption(product, category_url=None):
     price      = esc(product.get("price", ""))
     mrp        = esc(product.get("original_price") or product.get("mrp", ""))
     discount   = esc(product.get("discount", ""))
-    bank_offer = esc(product.get("bank_offer", ""))
-    normal_offer = esc(product.get("normal_offer", ""))
-    offers     = " ".join([bank_offer, normal_offer]).strip()
+    bank_offer = product.get("bank_offer", "")
+    normal_offer = product.get("normal_offer", "")
     cat_url    = esc(category_url) if category_url else None
 
-    lines = []
-    # Optional: category emoji, or leave empty for a “clean” look
-    # lines.append(f"🛍️")  
-    lines.append(f"*{title}*")
-    
-    # Price/mrp/discount line with emojis
+    lines = [f"*{title}*"]
     price_line = f"💰 {price}"
     if mrp and mrp != price:
         price_line += f" \\(MRP: ~{mrp}~"
         if discount:
-            price_line += f" 🔻 *{discount}*"   # Red triangle right before discount!
+            price_line += f" 🔻 {discount}"
         price_line += "\\)"
     lines.append(price_line)
-    
-    # Offers with emojis
-    if bank_offer:
-        lines.append(f"💳 {bank_offer}")
-    if normal_offer:
-        lines.append(f"💥 {normal_offer}")
-    
-    # Buy now
+
+    # This will add offers as a single line, just like Top 5
+    offer_msg = format_offer_line({
+        "bank_offer": bank_offer,
+        "normal_offer": normal_offer
+    })
+    if offer_msg:
+        lines.append(esc(offer_msg))
+
     if url:
         lines.append(f"🛒 [Buy Now]({url})")
     if cat_url:
         lines.append(f"🔗 [Explore more in this category]({cat_url})")
-
     return "\n".join(lines).strip()
+
 
 
 
@@ -176,6 +171,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
