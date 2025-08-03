@@ -95,41 +95,49 @@ def format_hidden_gems(products):
     return message.strip()
 
 def build_photo_caption(product, category_url=None):
-    # Strict MarkdownV2 escape
     def esc(text):
         if not text: return ""
         escape_chars = r"\_*[]()~`>#+-=|{}.!"
         return ''.join(['\\' + c if c in escape_chars else c for c in text])
-    
+
     title      = esc(product.get("title", "No Title"))
     url        = esc(product.get("url", ""))
     price      = esc(product.get("price", ""))
     mrp        = esc(product.get("original_price") or product.get("mrp", ""))
     discount   = esc(product.get("discount", ""))
-    # Optionally combine both, or just bank_offer if you want
     bank_offer = esc(product.get("bank_offer", ""))
     normal_offer = esc(product.get("normal_offer", ""))
     offers     = " ".join([bank_offer, normal_offer]).strip()
+    cat_url    = esc(category_url) if category_url else None
 
-    lines = [f"{title}"]
-    price_line = price
+    lines = []
+    # Optional: category emoji, or leave empty for a “clean” look
+    # lines.append(f"🛍️")  
+    lines.append(f"*{title}*")
+    
+    # Price/mrp/discount line with emojis
+    price_line = f"💰 {price}"
     if mrp and mrp != price:
         price_line += f" \\(MRP: ~{mrp}~"
         if discount:
-            price_line += f" \\| {discount}"   # ADD the backslash before |
+            price_line += f" 🔻 *{discount}*"   # Red triangle right before discount!
         price_line += "\\)"
-
     lines.append(price_line)
-    if offers:
-        lines.append(offers)
+    
+    # Offers with emojis
+    if bank_offer:
+        lines.append(f"💳 {bank_offer}")
+    if normal_offer:
+        lines.append(f"💥 {normal_offer}")
+    
+    # Buy now
     if url:
-        lines.append(f"[Buy Now]({url})")
-    # Optionally add category link as a last line if you want
-    if category_url:
-        cat_url = esc(category_url)
-        lines.append(f"[Explore more in this category]({cat_url})")
+        lines.append(f"🛒 [Buy Now]({url})")
+    if cat_url:
+        lines.append(f"🔗 [Explore more in this category]({cat_url})")
 
     return "\n".join(lines).strip()
+
 
 
 
@@ -168,6 +176,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
