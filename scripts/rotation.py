@@ -83,12 +83,23 @@ async def send_top5_per_category(fixed=False):
 
 
 # 💎 Hidden Gem
+from modules.prebuilt import get_hidden_gem
+from modules.scraper import scrape_hidden_gem
 from modules.templates import build_photo_caption
+from modules.telegram import send_photo, send as send_message
 
 async def send_hidden_gem():
-    gem = get_hidden_gem()
-    caption = build_photo_caption(gem)
-    await send_photo(gem['image'], caption)
+    gem_category = get_hidden_gem()  # returns {label, category, url}
+    label, products = await scrape_hidden_gem(gem_category['url'])  # actually scrapes
+
+    if not products:
+        await send_message("💎 No hidden gem found today. Check back tomorrow!")
+        return
+
+    product = products[0]
+    caption = build_photo_caption(product)
+    await send_photo(product['image'], caption)
+
 
 
 
@@ -296,3 +307,4 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
