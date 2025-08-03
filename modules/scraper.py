@@ -341,34 +341,53 @@ async def scrape_budget_products():
 
     return results
 
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+import random
+from modules.utils import get_browser_type
+
+# Optional: pass label for product's category_name
 async def scrape_hidden_gem(category_url, label="Hidden Gem"):
-    # You may also pass the label if you want!
+    """
+    Scrapes one product (with image) from the supplied hidden gem category URL.
+    Returns: (label, [product_dict]) or (label, []) if none found.
+    """
     url = category_url
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(browser_type)
+        browser, context = await get_browser_context(browser_type)  # <-- Proper unpack
         page = await context.new_page()
 
         try:
             await page.goto(url, timeout=60000)
             await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=30000)
             cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
-            random.shuffle(cards)
+            if not cards:
+                print("No product cards found.")
+                return label, []
+
+            random.shuffle(cards)  # Adds randomness for variety
 
             for card in cards:
-                # You must pass a category_name or just reuse label for this context
                 product = await extract_product_data(card, context, label)
+                # Ensure product has an image and key details
                 if product and product.get("image"):
                     await browser.close()
                     return label, [product]
 
-        except PlaywrightTimeoutError:
+        except PlaywrightTimeoutError as e:
+            print(f"Playwright Timeout scraping hidden gem: {e}")
             await page.screenshot(path="hidden_gem_error.png")
+        except Exception as e:
+            print(f"Unexpected scraping error: {e}")
         finally:
             await browser.close()
 
+    # If we reach here, nothing was found
     return label, []
+
+
+    return label, []
+
 
 
