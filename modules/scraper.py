@@ -341,14 +341,14 @@ async def scrape_budget_products():
 
     return results
 
-async def scrape_hidden_gem():
-    category = random.choice(HIDDEN_GEM_CATEGORIES)
-    label, url = category["label"], category["url"]
+async def scrape_hidden_gem(category_url, label="Hidden Gem"):
+    # You may also pass the label if you want!
+    url = category_url
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
         browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(browser_type) 
+        context = await get_browser_context(browser_type)
         page = await context.new_page()
 
         try:
@@ -358,7 +358,8 @@ async def scrape_hidden_gem():
             random.shuffle(cards)
 
             for card in cards:
-                product = await extract_product_data(card, context, category_name)
+                # You must pass a category_name or just reuse label for this context
+                product = await extract_product_data(card, context, label)
                 if product and product.get("image"):
                     await browser.close()
                     return label, [product]
@@ -369,3 +370,5 @@ async def scrape_hidden_gem():
             await browser.close()
 
     return label, []
+
+
