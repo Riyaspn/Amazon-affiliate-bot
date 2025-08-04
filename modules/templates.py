@@ -85,35 +85,38 @@ def format_budget_picks_html(products):
 
 
 
+
 def format_hidden_gems(products):
-    # Header (optional, or you can remove for solo products)
+    # Header for the block (shows only if multiple products)
     message = "🧪 *Hidden Gems on Amazon*\n\n"
     for i, p in enumerate(products, start=1):
-        # Call the new version of build_photo_caption
-        caption = build_photo_caption(p, category_url=p.get("category_url"))
+        caption = build_photo_caption(
+            p,
+            category_url=p.get("category_url")
+        )
         message += caption + "\n\n"
     return message.strip()
 
 def build_photo_caption(product, category_url=None):
     def esc(text):
-        if not text: return ""
+        if not text:
+            return ""
         escape_chars = r"\_*[]()~`>#+-=|{}.!"
         return ''.join(['\\' + c if c in escape_chars else c for c in text])
-
-    title      = esc(product.get("title", "No Title"))
-    url        = esc(product.get("url", ""))
-    price      = esc(product.get("price", ""))
-    mrp        = esc(product.get("original_price") or product.get("mrp", ""))
-    discount   = esc(product.get("discount", ""))
-    bank_offer = product.get("bank_offer", "")
-    normal_offer = product.get("normal_offer", "")
-    offer_line = format_offer_line({
-        "bank_offer": bank_offer,
-        "normal_offer": normal_offer
-    })
-    cat_url    = esc(category_url) if category_url else None
+    
+    title        = esc(product.get("title", "No Title"))
+    url          = esc(product.get("url", ""))
+    price        = esc(product.get("price", ""))
+    mrp          = esc(product.get("original_price") or product.get("mrp", ""))
+    discount     = esc(product.get("discount", ""))
+    category     = esc(product.get("category", ""))  # 'Hidden gem' expected
+    cat_url      = esc(category_url) if category_url else None
 
     lines = [f"*{title}*"]
+    # Show category line if present
+    if category:
+        lines.append(f"🏷️ _Category: {category}_")
+
     price_line = f"💰 {price}"
     if mrp and mrp != price:
         price_line += f" \\(MRP: ~{mrp}~"
@@ -122,6 +125,8 @@ def build_photo_caption(product, category_url=None):
         price_line += "\\)"
     lines.append(price_line)
 
+    # Use your improved offer line
+    offer_line = format_offer_line(product)
     if offer_line:
         lines.append(esc(offer_line))
 
@@ -130,6 +135,7 @@ def build_photo_caption(product, category_url=None):
     if cat_url:
         lines.append(f"🔗 [Explore more in this category]({cat_url})")
     return "\n".join(lines).strip()
+
 
 
 
@@ -171,6 +177,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
