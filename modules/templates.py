@@ -87,6 +87,8 @@ def format_budget_picks_html(products):
 
 
 def format_hidden_gems(products):
+    if not products:
+        return "No hidden gems found right now."
     # Get the main category display name and link from the first product
     main_category = products[0].get("category_display", "Hidden Gem")
     category_url = products[0].get("category_url")
@@ -102,26 +104,26 @@ def format_hidden_gems(products):
         message += caption + "\n\n"
     return message.strip()
 
-
-
 def build_photo_caption(product, category_url=None):
     def esc(text):
         if not text:
             return ""
         escape_chars = r"\_*[]()~`>#+-=|{}.!"
         return ''.join(['\\' + c if c in escape_chars else c for c in text])
-
     title        = esc(product.get("title", "No Title"))
     url          = esc(product.get("url", ""))
     price        = esc(product.get("price", ""))
     mrp          = esc(product.get("original_price") or product.get("mrp", ""))
     discount     = esc(product.get("discount", ""))
+    rating       = esc(product.get("rating", ""))
     offer_line   = format_offer_line(product)
     # category_display for pretty text (like 'Travel & Shoe Bags')
     category_hr  = esc(product.get("category_display", ""))
 
     lines = []
-    lines.append(title)
+    lines.append(f"*{title}*")  # Bold product title
+    if rating:
+        lines.append(f"⭐ {rating}")
     price_line = f"💰 {price}"
     if mrp and mrp != price:
         price_line += f" \\(MRP: ~{mrp}~"
@@ -135,6 +137,7 @@ def build_photo_caption(product, category_url=None):
         lines.append(f"🛒 [Buy Now]({url})")
     # The category link is already in the header, so you may skip it here
     return "\n".join(lines).strip()
+
 
 
 
@@ -178,6 +181,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
