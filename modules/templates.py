@@ -93,8 +93,7 @@ def format_hidden_gems(products):
     main_category = products[0].get("category_display", "Hidden Gem")
     category_url = products[0].get("category_url")
     header = f"*Hidden Gem in {main_category}*" if main_category else "*Hidden Gem*"
-    if category_url:
-        header += f"\n[Explore more in {main_category}]({category_url})"
+    
     message = header + "\n\n"
     for p in products:
         caption = build_photo_caption(
@@ -102,7 +101,12 @@ def format_hidden_gems(products):
             category_url=p.get("category_url")
         )
         message += caption + "\n\n"
+    # Now place 'Explore more...' at the very end
+    if category_url:
+        message += f"🔎 Explore more in {main_category}: [Browse Category]({category_url})"
+
     return message.strip()
+
 
 def build_photo_caption(product, category_url=None):
     def esc(text):
@@ -181,6 +185,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
