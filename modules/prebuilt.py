@@ -49,31 +49,39 @@ def get_flash_deal_links():
         {"title": "⚡ 50% Off or More", "url": f"https://www.amazon.in/s?i=deals&rh=p_n_deal_type%3A26921224031&tag={AFFILIATE_TAG}"},
     ]
 
-# 💎 Hidden Gem logic — select 1 unused prebuilt link
-from datetime import datetime
+# 💎 Hidden Gem logic 
+import os
 import random
 from modules.utils import AFFILIATE_TAG
 from modules.categories import HIDDEN_GEM_CATEGORIES
 
-
 HIDDEN_GEM_LABELS = ["💎 Hidden Gem", "🆕 Niche Find", "💡 Smart Buy"]
+HIDDEN_GEM_INDEX_FILE = "hidden_gem_index.txt"
+
+def get_and_update_hidden_gem_index(num_categories):
+    idx = 0
+    if os.path.exists(HIDDEN_GEM_INDEX_FILE):
+        try:
+            with open(HIDDEN_GEM_INDEX_FILE, "r") as f:
+                idx = int(f.read().strip())
+        except Exception:
+            idx = 0
+    new_idx = (idx + 1) % num_categories
+    with open(HIDDEN_GEM_INDEX_FILE, "w") as f:
+        f.write(str(new_idx))
+    return idx
 
 def get_hidden_gem():
-    # Rotate through categories without immediate repeat
-    today = datetime.now().toordinal()
-    offset = today % len(HIDDEN_GEM_CATEGORIES)
-
-    # Pick category based on rotating index
-    selected = HIDDEN_GEM_CATEGORIES[offset]
-
-    # Randomly rotate label
+    idx = get_and_update_hidden_gem_index(len(HIDDEN_GEM_CATEGORIES))
+    selected = HIDDEN_GEM_CATEGORIES[idx]
     label = random.choice(HIDDEN_GEM_LABELS)
-
     return {
         "label": label,
         "category": selected["label"],
         "url": f"{selected['url']}&tag={AFFILIATE_TAG}"
     }
+
+
 
 
 # 🎯 Combo Deal Categories (easily editable)
@@ -101,6 +109,7 @@ BUDGET_PICK_CATEGORIES = {
     "🖊️ Stationery & Supplies": "https://www.amazon.in/s?k=stationery&rh=p_36%3A-99900",
     "🧴 Health & Wellness": "https://www.amazon.in/s?k=health&rh=p_36%3A-99900",
 }
+
 
 
 
