@@ -59,20 +59,38 @@ HIDDEN_GEM_LABELS = ["💎 Hidden Gem", "🆕 Niche Find", "💡 Smart Buy"]
 HIDDEN_GEM_INDEX_FILE = "hidden_gem_index.txt"
 
 def get_and_update_hidden_gem_index(num_categories):
+    """
+    Loads the current index from hidden_gem_index.txt,
+    returns it, increments, and saves for next run.
+    Wraps at num_categories.
+    """
     idx = 0
+    # Try to load the existing index if file exists
     if os.path.exists(HIDDEN_GEM_INDEX_FILE):
         try:
             with open(HIDDEN_GEM_INDEX_FILE, "r") as f:
-                idx = int(f.read().strip())
+                data = f.read().strip()
+                if data:
+                    idx = int(data)
         except Exception:
             idx = 0
+    # Calculate next index (wraps around)
     new_idx = (idx + 1) % num_categories
+    # Save new index back to file for next run
     with open(HIDDEN_GEM_INDEX_FILE, "w") as f:
         f.write(str(new_idx))
     return idx
 
 def get_hidden_gem():
-    idx = get_and_update_hidden_gem_index(len(HIDDEN_GEM_CATEGORIES))
+    """
+    Returns the current hidden gem dict with:
+    - label
+    - category (user-friendly)
+    - url (with your affiliate tag)
+    Increments the category pointer, ensuring round-robin rotation.
+    """
+    num_categories = len(HIDDEN_GEM_CATEGORIES)
+    idx = get_and_update_hidden_gem_index(num_categories)
     selected = HIDDEN_GEM_CATEGORIES[idx]
     label = random.choice(HIDDEN_GEM_LABELS)
     return {
@@ -80,6 +98,7 @@ def get_hidden_gem():
         "category": selected["label"],
         "url": f"{selected['url']}&tag={AFFILIATE_TAG}"
     }
+
 
 
 
@@ -109,6 +128,7 @@ BUDGET_PICK_CATEGORIES = {
     "🖊️ Stationery & Supplies": "https://www.amazon.in/s?k=stationery&rh=p_36%3A-99900",
     "🧴 Health & Wellness": "https://www.amazon.in/s?k=health&rh=p_36%3A-99900",
 }
+
 
 
 
