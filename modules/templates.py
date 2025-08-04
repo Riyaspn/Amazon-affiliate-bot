@@ -109,11 +109,11 @@ def build_photo_caption(product, category_url=None):
     price        = esc(product.get("price", ""))
     mrp          = esc(product.get("original_price") or product.get("mrp", ""))
     discount     = esc(product.get("discount", ""))
-    category     = esc(product.get("category", ""))  # 'Hidden gem' expected
     cat_url      = esc(category_url) if category_url else None
+    category     = esc(product.get("category", ""))  # Separate field expected!
 
     lines = [f"*{title}*"]
-    # Show category line if present
+    # Category line
     if category:
         lines.append(f"🏷️ _Category: {category}_")
 
@@ -125,16 +125,16 @@ def build_photo_caption(product, category_url=None):
         price_line += "\\)"
     lines.append(price_line)
 
-    # Use your improved offer line
+    # Correct: call with full dict!
     offer_line = format_offer_line(product)
     if offer_line:
         lines.append(esc(offer_line))
-
     if url:
         lines.append(f"🛒 [Buy Now]({url})")
     if cat_url:
         lines.append(f"🔗 [Explore more in this category]({cat_url})")
     return "\n".join(lines).strip()
+
 
 
 
@@ -177,6 +177,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
