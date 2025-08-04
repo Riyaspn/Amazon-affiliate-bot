@@ -30,6 +30,10 @@ def truncate_markdown(text, limit=80):
     truncated = text[:limit].rsplit(' ', 1)[0]
     return escape_markdown(truncated + "...")
 
+def truncate_title(title, limit=60):
+    return title[:limit].rstrip() + "..." if len(title) > limit else title
+
+
 def escape_caption_html(text: str, max_bytes: int = 1024) -> str:
     """Truncate caption HTML to a max byte limit without breaking tags."""
     while len(text.encode('utf-8')) > max_bytes:
@@ -227,5 +231,6 @@ def format_offer_line(product):
         return f"💥 {cashback_val} cashback"
     else:
         return ""  # No valid offer text 
+
 
 
