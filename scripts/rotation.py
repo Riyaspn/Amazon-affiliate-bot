@@ -103,8 +103,9 @@ async def send_hidden_gem():
         return
 
     product = products[0]
-    caption = build_photo_caption(product)  # already handles category_display
-    await send_photo(product["image"], caption)
+    caption = format_hidden_gems([product])
+    await send_photo(product['image'], caption)
+
 
 
 
@@ -314,5 +315,6 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
 
