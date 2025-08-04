@@ -23,6 +23,8 @@ import asyncio
 
 import re
 
+import re
+
 async def extract_product_data(card, context, category_name, markdown=False, detail_page=None):
     try:
         # --- Product Link ---
@@ -31,6 +33,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
             await card.query_selector("a.a-link-normal")
         )
         url = await link_element.get_attribute("href") if link_element else None
+        # Fix for full Amazon URL
         if url and not url.startswith("http"):
             url = "https://www.amazon.in" + url
         full_url = ensure_affiliate_tag(url) if url else None
@@ -69,7 +72,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else ""
 
-        # === DETAIL PAGE ===
+        # === DETAIL PAGE (for MRP, deals, offers, etc) ===
         product_page = detail_page or await context.new_page()
         await product_page.goto(full_url, timeout=20000)
         await product_page.wait_for_load_state("domcontentloaded")
@@ -91,85 +94,46 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         )
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # --- OFFERS: Robust Cashback & Bank Offer Extraction ---
-        bank_offer, cashback = "", ""
+        # --- OFFERS: Carousel-based Accurate Extraction ---
+        cashback = ""
+        bank_offer = ""
         try:
-            # 1. Try the prominent offers tiles
-            offer_tiles = await product_page.query_selector_all('div[data-csa-c-type="widget"] div, div.a-box-group div')
-            for tile in offer_tiles:
-                tile_text = (await tile.inner_text()).strip().lower()
-                # Cashback parsing
-                if ("cashback" in tile_text or "amazon pay" in tile_text) and not cashback:
-                    match = re.search(r'₹[\d,.]+', tile_text)
-                    if match:
-                        cashback = f"Upto {match.group(0)} cashback as Amazon Pay Balance"
-                    else:
-                        # Use the full line if regex fails
-                        cashback_lines = [
-                            line for line in tile_text.split("\n")
-                            if ("cashback" in line or "amazon pay" in line) and "₹" in line
-                        ]
-                        if cashback_lines:
-                            cashback = cashback_lines[0].capitalize()
-                # Bank offer parsing
-                if any(bank_kw in tile_text for bank_kw in ["bank", "credit", "debit", "upi", "sbi", "icici"]) and not bank_offer:
-                    match = re.search(r'₹[\d,.]+', tile_text)
-                    if match:
-                        bank_offer = f"Upto {match.group(0)} off on select cards"
-                    else:
-                        bank_lines = [
-                            line for line in tile_text.split("\n")
-                            if any(bk in line for bk in ["bank", "credit", "debit", "upi", "sbi", "icici"]) and "₹" in line
-                        ]
-                        if bank_lines:
-                            bank_offer = bank_lines[0].capitalize()
-            # Short-circuit if both found
-            if bank_offer or cashback:
-                await product_page.close()
-                offer_text = format_offer_line({"bank_offer": bank_offer, "normal_offer": cashback})
-                return {
-                    "title": title.strip(),
-                    "url": full_url,
-                    "image": image,
-                    "price": price.strip(),
-                    "original_price": original_price.strip(),
-                    "rating": rating.strip() if rating else "",
-                    "bank_offer": bank_offer,
-                    "normal_offer": cashback,
-                    "clean_offer": offer_text,
-                    "deal": deal.strip(),
-                    "discount": "",
-                    "category": category_name,
-                }
-        except Exception as e:
-            print(f"⚠️ Offers tile extraction error: {e}")
+            offer_cards = await product_page.query_selector_all("li.a-carousel-card .offers-items")
+            for card in offer_cards:
+                # Get the offer type: Cashback, Bank Offer, etc.
+                offer_title_elem = await card.query_selector("h6.offers-items-title")
+                offer_title = (await offer_title_elem.inner_text()).strip().lower() if offer_title_elem else ""
 
-        # 2. Fallback: extract from visible spans
-        try:
-            offer_spans = await product_page.query_selector_all("span.a-truncate-full.a-offscreen, span.a-truncate-full")
-            for span in offer_spans:
-                text = (await span.inner_text()).strip()
-                lower = text.lower()
-                if "cashback" in lower and not cashback:
-                    m = re.search(r'₹[\d,.]+', text)
-                    cashback = text if m else cashback
-                elif any(k in lower for k in ["bank", "credit", "debit", "instant", "upi", "sbi", "icici"]) and not bank_offer:
-                    m = re.search(r'₹[\d,.]+', text)
-                    bank_offer = text if m else bank_offer
-        except Exception as e:
-            print(f"⚠️ Offer span error: {e}")
+                # Get the main visible text for this offer
+                value_elem = await card.query_selector("span.a-truncate-full.a-offscreen")
+                value_text = (await value_elem.inner_text()).strip() if value_elem else ""
 
-        # 3. Fallback: static special promo blocks
-        try:
-            static_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
-            for block in static_blocks:
-                block_text = (await block.inner_text()).strip().lower()
-                if "cashback" in block_text and "₹" in block_text and not cashback:
-                    cashback = block_text.capitalize()
-                if any(k in block_text for k in ["bank", "credit", "debit", "card", "upi", "sbi", "icici"]) and "₹" in block_text and not bank_offer:
-                    bank_offer = block_text.capitalize()
+                if "cashback" in offer_title and "₹" in value_text and not cashback:
+                    cashback = value_text
+                elif "bank" in offer_title and "₹" in value_text and not bank_offer:
+                    bank_offer = value_text
+
+            # Add context so outputs match message expectations
+            if cashback and not cashback.lower().endswith("cashback"):
+                cashback += " cashback"
+            if bank_offer and not ("off" in bank_offer.lower() or "discount" in bank_offer.lower()):
+                bank_offer += " off on select cards"
         except Exception as e:
-            print(f"⚠️ Static offer block error: {e}")
+            print(f"⚠️ Carousel offer extraction error: {e}")
+
+        # === Fallback: Generic Span/Block Search (Covers edge cases only if above fails) ===
+        if not cashback or not bank_offer:
+            try:
+                offer_spans = await product_page.query_selector_all("span.a-truncate-full.a-offscreen")
+                for span in offer_spans:
+                    text = (await span.inner_text()).strip()
+                    lower = text.lower()
+                    if "cashback" in lower and not cashback:
+                        cashback = text
+                    elif any(k in lower for k in ["bank", "credit", "debit", "instant", "upi", "sbi", "icici"]) and not bank_offer:
+                        bank_offer = text
+            except Exception as e:
+                print(f"⚠️ Fallback span offer extraction error: {e}")
 
         # --- Discount Calculation ---
         discount = ""
@@ -404,6 +368,7 @@ async def scrape_hidden_gem(category_url, category_display, label="Hidden Gem"):
             await browser.close()
 
     return label, []
+
 
 
 
