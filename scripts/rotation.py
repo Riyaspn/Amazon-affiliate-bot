@@ -116,69 +116,48 @@ async def send_hidden_gem():
 
 
 # 💸 Budget Picks
+
+
 from modules.telegram import send as send_message
 from modules.categories import get_random_rotating_categories
 from modules.scraper import scrape_top5_per_category
-import re
-
-def truncate_title(title, limit=60):
-    return title[:limit].rstrip() + "..." if len(title) > limit else title
+from modules.templates import format_budget_picks_html
+from modules.utils import truncate_title, clean_affiliate_url
+from playwright.async_api import async_playwright
 
 async def send_budget_picks():
     print("💸 Sending Budget Picks (Rotational)")
     selected_categories = get_random_rotating_categories(n=5)
+    budget_products = []
 
-    message = "<b>💸 Budget Picks of the Day (Under ₹999)</b>\n\n"
-    any_product_found = False
-
-    for category_name, category_url in selected_categories:
-        print(f"🔍 Scraping Bestsellers: {category_name}")
-        products = await scrape_top5_per_category(category_name, category_url, max_results=15)
-
-        valid_prices = 0
-        budget_product = None
-
-        for product in products:
-            try:
-                price_text = product.get("price", "").replace("₹", "").replace(",", "").strip()
-                if not price_text or not price_text.replace(".", "", 1).isdigit():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        for category_name, category_url in selected_categories:
+            print(f"🔍 Scraping Bestsellers: {category_name}")
+            products = await scrape_top5_per_category(category_name, category_url, context, max_results=15)
+            for product in products:
+                try:
+                    # Verify and filter under ₹999
+                    price = float(product["price"].replace("₹", "").replace(",", "").strip())
+                    if price <= 999:
+                        # Clean and format fields
+                        product['title'] = truncate_title(product['title'])
+                        product['url'] = clean_affiliate_url(product['url'])
+                        budget_products.append(product)
+                        break
+                except Exception:
                     continue
+        await browser.close()
 
-                price = float(price_text)
-                valid_prices += 1
+    if not budget_products:
+        await send_message("😔 Couldn't find any deals under ₹999 today. Check back tomorrow!", parse_mode="HTML")
+        return
 
-                if price <= 999:
-                    budget_product = product
-                    break
-            except Exception as e:
-                print(f"❌ Error parsing price for {product.get('title', '')[:40]}: {e}")
-                continue
+    # Format message using your template system
+    message = format_budget_picks_html(budget_products)
+    await send_message(message, parse_mode="HTML")
 
-        print(f"✅ {valid_prices} products with valid prices in: {category_name}")
-
-        if not budget_product:
-            print(f"⚠️ No valid budget product in: {category_name}")
-            continue
-
-        any_product_found = True
-
-        # Clean and truncate
-        short_title = truncate_title(budget_product['title'].replace("🛍️", "").strip())
-        short_url = re.sub(r"(ref=.*)", "", budget_product['url'].split("?")[0])
-        asin_match = re.search(r"/dp/([A-Z0-9]{10})", short_url)
-        final_url = f"https://www.amazon.in/dp/{asin_match.group(1)}?tag=storesofriyas-21" if asin_match else budget_product['url']
-
-        message += (
-            f"<b>{category_name}</b>\n"
-            f"<b>🛍️ {short_title}</b>\n"
-            f"{budget_product['price']} | ⭐ {budget_product['rating']}\n"
-            f"<a href=\"{final_url}\">🔗 View Deal</a>\n\n"
-        )
-
-    if not any_product_found:
-        message += "😔 Couldn't find any deals under ₹999 today. Check back tomorrow!"
-
-    await send_message(message.strip(), parse_mode="HTML")
 
 
 
@@ -325,6 +304,7 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
 
 
