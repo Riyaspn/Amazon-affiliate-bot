@@ -288,10 +288,19 @@ async def send_combo_deal(max_products=1):
 # 🔗 Prebuilt Category Links
 async def send_prebuilt_links():
     links = get_prebuilt_links()
-    message = "🔗 *Amazon Prebuilt Category Pages*\n\n"
-    for item in links:
-        message += f"📢 {item['category']}\n🔗 [View Deals]({item['url']})\n\n"
+    message = (
+        "💥 *Amazon's Top Trending Deal Zones!*\n"
+        "Click a category to unlock today's hottest finds:\n\n"
+    )
+    for i, item in enumerate(links, 1):
+        # Bold category with emoji, clear emoji for CTA
+        message += (
+            f"{i}. *{item['category']}*\n"
+            f"   👉 [Shop This Zone]({item['url']})\n\n"
+        )
+    message += "⏳ *Deals update daily—check back tomorrow for fresh picks!*"
     await send_message(message.strip())
+
 
 
 # 🌅 Morning Rotation
@@ -316,6 +325,7 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
 
 
