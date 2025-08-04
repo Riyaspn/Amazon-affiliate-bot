@@ -90,15 +90,22 @@ from modules.telegram import send_photo, send as send_message
 
 async def send_hidden_gem():
     gem_category = get_hidden_gem()  # returns {label, category, url}
-    label, products = await scrape_hidden_gem(gem_category['url'])  # actually scrapes
+
+    # Make sure to pass the human-friendly category_display as the second arg!
+    label, products = await scrape_hidden_gem(
+        gem_category["url"],
+        gem_category["category"],
+        gem_category.get("label", "Hidden Gem")
+    )
 
     if not products:
         await send_message("💎 No hidden gem found today. Check back tomorrow!")
         return
 
     product = products[0]
-    caption = build_photo_caption(product)
-    await send_photo(product['image'], caption)
+    caption = build_photo_caption(product)  # already handles category_display
+    await send_photo(product["image"], caption)
+
 
 
 
@@ -307,4 +314,5 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
