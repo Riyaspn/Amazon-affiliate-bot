@@ -368,7 +368,7 @@ import random
 from modules.utils import get_browser_type
 
 # Optional: pass label for product's category_name
-async def scrape_hidden_gem(category_url, label="Hidden Gem"):
+async def scrape_hidden_gem(category_url, category_display, label="Hidden Gem"):
     url = category_url
 
     async with async_playwright() as p:
@@ -389,7 +389,8 @@ async def scrape_hidden_gem(category_url, label="Hidden Gem"):
             for card in cards:
                 product = await extract_product_data(card, context, label)
                 if product and product.get("image"):
-                    product["category_url"] = url  # <---- THIS ENSURES category_url PRESENT!
+                    product["category_url"] = url  # always include affiliate tag here!
+                    product["category_display"] = category_display  # <-- added
                     await browser.close()
                     return label, [product]
 
