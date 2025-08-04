@@ -13,6 +13,7 @@ from modules.templates import (
     format_budget_picks_html,
     format_combo_deal_markdown,
     format_product_of_the_day,
+    format_hidden_gems
 )
 
 
@@ -315,6 +316,7 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
 
 
