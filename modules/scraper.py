@@ -21,17 +21,16 @@ import asyncio
 # 🔍 Extract individual product data
 
 
+import re
+
 async def extract_product_data(card, context, category_name, markdown=False, detail_page=None):
     try:
-        # === CARD ELEMENTS (Universal, try all selectors per field) ===
-
         # --- Product Link ---
         link_element = (
             await card.query_selector("a.a-link-normal.aok-block") or
             await card.query_selector("a.a-link-normal")
         )
         url = await link_element.get_attribute("href") if link_element else None
-        # Fix for full Amazon URL
         if url and not url.startswith("http"):
             url = "https://www.amazon.in" + url
         full_url = ensure_affiliate_tag(url) if url else None
@@ -42,7 +41,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         title_element = (
             await card.query_selector("._cDEzb_p13n-sc-css-line-clamp-3_g3dy1") or
             await card.query_selector("h2.a-size-base-plus") or
-            await card.query_selector("span.a-text-normal")  # fallback
+            await card.query_selector("span.a-text-normal")
         )
         title = await title_element.inner_text() if title_element else None
         if not title:
@@ -70,7 +69,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         rating_element = await card.query_selector("span.a-icon-alt")
         rating = await rating_element.inner_text() if rating_element else ""
 
-        # === DETAIL PAGE (for MRP, deals, offers, etc) ===
+        # === DETAIL PAGE ===
         product_page = detail_page or await context.new_page()
         await product_page.goto(full_url, timeout=20000)
         await product_page.wait_for_load_state("domcontentloaded")
@@ -88,90 +87,89 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         # --- Deal Tag ---
         deal_element = (
             await product_page.query_selector('[id^="100_dealView_"] .a-text-bold') or
-            await product_page.query_selector('span.a-badge-text')  # fallback
+            await product_page.query_selector('span.a-badge-text')
         )
         deal = await deal_element.inner_text() if deal_element else ""
 
-        # --- OFFERS: Bank & Cashback ---
-        bank_offer, normal_offer = "", ""
+        # --- OFFERS: Robust Cashback & Bank Offer Extraction ---
+        bank_offer, cashback = "", ""
         try:
-            offer_spans = await product_page.query_selector_all("span.a-truncate-full.a-offscreen")
+            # 1. Try the prominent offers tiles
+            offer_tiles = await product_page.query_selector_all('div[data-csa-c-type="widget"] div, div.a-box-group div')
+            for tile in offer_tiles:
+                tile_text = (await tile.inner_text()).strip().lower()
+                # Cashback parsing
+                if ("cashback" in tile_text or "amazon pay" in tile_text) and not cashback:
+                    match = re.search(r'₹[\d,.]+', tile_text)
+                    if match:
+                        cashback = f"Upto {match.group(0)} cashback as Amazon Pay Balance"
+                    else:
+                        # Use the full line if regex fails
+                        cashback_lines = [
+                            line for line in tile_text.split("\n")
+                            if ("cashback" in line or "amazon pay" in line) and "₹" in line
+                        ]
+                        if cashback_lines:
+                            cashback = cashback_lines[0].capitalize()
+                # Bank offer parsing
+                if any(bank_kw in tile_text for bank_kw in ["bank", "credit", "debit", "upi", "sbi", "icici"]) and not bank_offer:
+                    match = re.search(r'₹[\d,.]+', tile_text)
+                    if match:
+                        bank_offer = f"Upto {match.group(0)} off on select cards"
+                    else:
+                        bank_lines = [
+                            line for line in tile_text.split("\n")
+                            if any(bk in line for bk in ["bank", "credit", "debit", "upi", "sbi", "icici"]) and "₹" in line
+                        ]
+                        if bank_lines:
+                            bank_offer = bank_lines[0].capitalize()
+            # Short-circuit if both found
+            if bank_offer or cashback:
+                await product_page.close()
+                offer_text = format_offer_line({"bank_offer": bank_offer, "normal_offer": cashback})
+                return {
+                    "title": title.strip(),
+                    "url": full_url,
+                    "image": image,
+                    "price": price.strip(),
+                    "original_price": original_price.strip(),
+                    "rating": rating.strip() if rating else "",
+                    "bank_offer": bank_offer,
+                    "normal_offer": cashback,
+                    "clean_offer": offer_text,
+                    "deal": deal.strip(),
+                    "discount": "",
+                    "category": category_name,
+                }
+        except Exception as e:
+            print(f"⚠️ Offers tile extraction error: {e}")
+
+        # 2. Fallback: extract from visible spans
+        try:
+            offer_spans = await product_page.query_selector_all("span.a-truncate-full.a-offscreen, span.a-truncate-full")
             for span in offer_spans:
                 text = (await span.inner_text()).strip()
                 lower = text.lower()
-                if "cashback" in lower and not normal_offer:
-                    normal_offer = text
-                elif any(k in lower for k in ["bank", "credit", "debit", "instant", "upi"]) and not bank_offer:
-                    bank_offer = text
+                if "cashback" in lower and not cashback:
+                    m = re.search(r'₹[\d,.]+', text)
+                    cashback = text if m else cashback
+                elif any(k in lower for k in ["bank", "credit", "debit", "instant", "upi", "sbi", "icici"]) and not bank_offer:
+                    m = re.search(r'₹[\d,.]+', text)
+                    bank_offer = text if m else bank_offer
         except Exception as e:
             print(f"⚠️ Offer span error: {e}")
 
-        # --- Fallback: Modal carousel ---
-        if not bank_offer or not normal_offer:
-            try:
-                vse_container = await product_page.query_selector('#vse-offers-container')
-                if vse_container:
-                    await product_page.evaluate("""
-                        const el = document.querySelector('#vse-offers-container');
-                        if (el && window.getComputedStyle(el).display === 'none') {
-                            el.style.display = 'block';
-                        }
-                    """)
-                    await vse_container.scroll_into_view_if_needed()
-                    await product_page.wait_for_timeout(800)
-                    carousel_items = await vse_container.query_selector_all("li.a-carousel-card")
-                    for item in carousel_items:
-                        title_elem = await item.query_selector("h6.offers-items-title")
-                        title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
-                        visible_offer_elem = await item.query_selector("span.a-truncate-full.a-offscreen")
-                        visible_offer = (await visible_offer_elem.inner_text()).strip() if visible_offer_elem else ""
-                        if "cashback" in title_text and not normal_offer and visible_offer:
-                            normal_offer = visible_offer
-                        elif any(k in title_text for k in ["bank", "credit", "debit", "upi"]) and not bank_offer and visible_offer:
-                            bank_offer = visible_offer
-                        if not (bank_offer and normal_offer):
-                            click_trigger = await item.query_selector("span.a-declarative")
-                            if click_trigger:
-                                await click_trigger.click()
-                                await product_page.wait_for_selector("#tp-side-sheet-main-section", timeout=3000)
-                                await product_page.wait_for_timeout(800)
-                                offer_blocks = await product_page.query_selector_all(
-                                    "#tp-side-sheet-main-section .vsx-offers-desktop-lv__item p"
-                                )
-                                for offer_elem in offer_blocks:
-                                    offer = (await offer_elem.inner_text()).strip()
-                                    offer_l = offer.lower()
-                                    if "cashback" in offer_l and not normal_offer:
-                                        normal_offer = offer
-                                    elif any(k in offer_l for k in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                                        bank_offer = offer
-                                close_btn = await product_page.query_selector("button[aria-label='Close']")
-                                if close_btn:
-                                    await close_btn.click()
-                                    await product_page.wait_for_timeout(500)
-            except Exception as e:
-                print(f"⚠️ Carousel fallback error: {e}")
-
-        # --- Fallback: Static offer blocks ---
-        if not bank_offer or not normal_offer:
-            try:
-                offer_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
-                for block in offer_blocks:
-                    title_elem = await block.query_selector("h1")
-                    title_text = (await title_elem.inner_text()).strip().lower() if title_elem else ""
-                    para_elems = await block.query_selector_all("p")
-                    for p in para_elems:
-                        line = (await p.inner_text()).strip()
-                        l = line.lower()
-                        if "cashback" in title_text and not normal_offer:
-                            normal_offer = line
-                        elif any(k in title_text for k in ["bank", "credit", "debit", "upi", "instant"]) and not bank_offer:
-                            bank_offer = line
-            except Exception as e:
-                print(f"⚠️ Static offer block error: {e}")
-
-        if not detail_page:
-            await product_page.close()
+        # 3. Fallback: static special promo blocks
+        try:
+            static_blocks = await product_page.query_selector_all('div[id^="GCCashback"], div[id^="InstantBankDiscount"]')
+            for block in static_blocks:
+                block_text = (await block.inner_text()).strip().lower()
+                if "cashback" in block_text and "₹" in block_text and not cashback:
+                    cashback = block_text.capitalize()
+                if any(k in block_text for k in ["bank", "credit", "debit", "card", "upi", "sbi", "icici"]) and "₹" in block_text and not bank_offer:
+                    bank_offer = block_text.capitalize()
+        except Exception as e:
+            print(f"⚠️ Static offer block error: {e}")
 
         # --- Discount Calculation ---
         discount = ""
@@ -186,8 +184,11 @@ async def extract_product_data(card, context, category_name, markdown=False, det
         # --- Format Clean Offer Line ---
         offer_text = format_offer_line({
             "bank_offer": bank_offer,
-            "normal_offer": normal_offer
+            "normal_offer": cashback
         })
+
+        if not detail_page:
+            await product_page.close()
 
         return {
             "title": title.strip(),
@@ -197,7 +198,7 @@ async def extract_product_data(card, context, category_name, markdown=False, det
             "original_price": original_price.strip(),
             "rating": rating.strip() if rating else "",
             "bank_offer": bank_offer,
-            "normal_offer": normal_offer,
+            "normal_offer": cashback,
             "clean_offer": offer_text,
             "deal": deal.strip(),
             "discount": discount,
@@ -403,6 +404,7 @@ async def scrape_hidden_gem(category_url, category_display, label="Hidden Gem"):
             await browser.close()
 
     return label, []
+
 
 
 
