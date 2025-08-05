@@ -92,28 +92,6 @@ def format_budget_picks_html(products):
 
 
 
-def format_hidden_gems(products):
-    if not products:
-        return "No hidden gems found right now."
-    # Get the main category display name and link from the first product
-    main_category = products[0].get("category_display", "Hidden Gem")
-    category_url = products[0].get("category_url")
-    header = f"*Hidden Gem in {main_category}*" if main_category else "*Hidden Gem*"
-    
-    message = header + "\n\n"
-    for p in products:
-        caption = build_photo_caption(
-            p,
-            category_url=p.get("category_url")
-        )
-        message += caption + "\n\n"
-    # Now place 'Explore more...' at the very end
-    if category_url:
-        message += f"🔎 Explore more in {main_category}: [Browse Category]({category_url})"
-
-    return message.strip()
-
-
 def build_photo_caption(product, category_url=None):
     def esc(text):
         if not text:
@@ -154,14 +132,66 @@ def build_photo_caption(product, category_url=None):
 
 
 
+def format_hidden_gems(products):
+    if not products:
+        return "No hidden gems found right now."
+    # Get the main category display name and link from the first product
+    main_category = products[0].get("category_display", "Hidden Gem")
+    category_url = products[0].get("category_url")
+    header = f"*Hidden Gem in {main_category}*" if main_category else "*Hidden Gem*"
+    
+    message = header + "\n\n"
+    for p in products:
+        caption = build_photo_caption(
+            p,
+            category_url=p.get("category_url")
+        )
+        message += caption + "\n\n"
+    # Now place 'Explore more...' at the very end
+    if category_url:
+        message += f"🔎 Explore more in {main_category}: [Browse Category]({category_url})"
+
+    return message.strip()
 
 
-def format_product_of_the_day(product, category=""):
-    prefix = f"🎯 Product of the Day – {escape_markdown(category)}" if category else "🎯 Product of the Day"
-    return build_photo_caption(product, label_emoji="🎯", title_prefix=prefix)
 
-def format_combo_deal_markdown(product, label_text="🎉 Combo Deal"):
-    return build_photo_caption(product, label_emoji=label_text)
+def format_combo_deal_markdown(products, label_text="🎉 Combo Deal"):
+    if not products:
+        return "No combo deal found right now."
+    main_category = products[0].get("category_display", label_text)
+    category_url = products[0].get("category_url")
+    header = f"{label_text} – *{main_category}*" if main_category else label_text
+
+    message = header + "\n\n"
+    for p in products:
+        caption = build_photo_caption(
+            p,
+            category_url=p.get("category_url")
+        )
+        message += caption + "\n\n"
+    if category_url:
+        message += f"🔎 See more in {main_category}: [Browse Category]({category_url})"
+    return message.strip()
+
+
+def format_product_of_the_day(products):
+    if not products:
+        return "No Product of the Day found right now."
+    main_category = products[0].get("category_display", "")
+    category_url = products[0].get("category_url")
+    header = f"🎯 *Product of the Day: {main_category}*" if main_category else "🎯 *Product of the Day*"
+
+    message = header + "\n\n"
+    for p in products:
+        caption = build_photo_caption(
+            p,
+            category_url=p.get("category_url")
+        )
+        message += caption + "\n\n"
+    if category_url:
+        message += f"🔎 Explore more: [Browse Category]({category_url})"
+    return message.strip()
+
 
 def format_markdown_caption(product: dict, label: str) -> str:
     """
@@ -191,6 +221,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
