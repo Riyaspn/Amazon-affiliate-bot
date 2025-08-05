@@ -122,7 +122,7 @@ from modules.telegram import send as send_message
 from modules.categories import get_random_rotating_categories
 from modules.scraper import scrape_top5_per_category
 from modules.templates import format_budget_picks_html
-from modules.utils import truncate_title, clean_affiliate_url
+from modules.utils import truncate_title, ensure_affiliate_tag
 from playwright.async_api import async_playwright
 
 async def send_budget_picks():
@@ -143,7 +143,7 @@ async def send_budget_picks():
                     if price <= 999:
                         # Clean and format fields
                         product['title'] = truncate_title(product['title'])
-                        product['url'] = clean_affiliate_url(product['url'])
+                        product['url'] = ensure_affiliate_tag(product['url'])
                         budget_products.append(product)
                         break
                 except Exception:
@@ -304,6 +304,7 @@ async def run_evening_rotation(current_day=None):
         await send_product_of_day()
     if day in ["Friday", "Sunday"]:
         await send_combo_deal()
+
 
 
 
