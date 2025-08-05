@@ -188,65 +188,83 @@ async def scrape_single_combo_product():
 
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(browser_type) 
+        browser, context = await get_browser_context(browser_type)
         page = await context.new_page()
 
         try:
             await page.goto(url, timeout=60000)
             await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=30000)
             cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
+            if not cards:
+                print("No product cards found.")
+                return label, []
+
             random.shuffle(cards)
-
             for card in cards:
-                data = await extract_product_data(card, context, category_name)
-                if data and data['url'] and data['image']:
+                product = await extract_product_data(card, context, label)
+                if product and product.get('image'):
+                    product['category_url'] = url
+                    product['category_display'] = label
                     await browser.close()
-                    return label, [data]
+                    return label, [product]
 
-        except PlaywrightTimeoutError:
+        except PlaywrightTimeoutError as e:
+            print(f"Timeout scraping combo: {e}")
             await page.screenshot(path="combo_error.png")
+        except Exception as e:
+            print(f"Unexpected scraping error in combo deals: {e}")
         finally:
             await browser.close()
 
     return label, []
 
+# -----
+
 async def scrape_product_of_the_day():
     url = "https://www.amazon.in/s?i=computers&rh=n%3A1377374031&fs=true"
+    label = "Product of the Day"
+    category_display = "Product of the Day"
+
     async with async_playwright() as p:
         browser_type = get_browser_type(p)
-        browser = await browser_type.launch(headless=True)
-        context = await get_browser_context(browser_type) 
+        browser, context = await get_browser_context(browser_type)
         page = await context.new_page()
 
         try:
             await page.goto(url, timeout=60000)
             await page.wait_for_selector('div[data-cy="asin-faceout-container"]', timeout=30000)
             cards = await page.query_selector_all('div[data-cy="asin-faceout-container"]')
+            if not cards:
+                print("No product cards found.")
+                return label, []
 
-            all_data = []
+            random.shuffle(cards)
             for card in cards:
-                data = await extract_product_data(card, context, category_name)
-                if data and data["price"] and data["original_price"]:
+                product = await extract_product_data(card, context, label)
+                # Only pick if there's a price, an original price, and a good discount
+                if product and product.get('price') and product.get('original_price'):
                     try:
-                        price_val = convert_price_to_float(data["price"])
-                        original_price_val = convert_price_to_float(data["original_price"])
+                        price_val = convert_price_to_float(product['price'])
+                        original_price_val = convert_price_to_float(product['original_price'])
                         discount_pct = round((original_price_val - price_val) / original_price_val * 100)
                         if discount_pct >= 20:
-                            data["discount"] = f"{discount_pct}% off"
-                            all_data.append(data)
-                    except:
-                        pass
+                            product['discount'] = f"{discount_pct}% off"
+                            product['category_url'] = url
+                            product['category_display'] = category_display
+                            await browser.close()
+                            return label, [product]
+                    except Exception:
+                        continue
 
-            sorted_data = sorted(all_data, key=lambda d: convert_price_to_float(d["price"]))
-            return sorted_data[:1]
-
-        except PlaywrightTimeoutError:
+        except PlaywrightTimeoutError as e:
+            print(f"Timeout in product of the day: {e}")
             await page.screenshot(path="potd_error.png")
+        except Exception as e:
+            print(f"Unexpected error in product of the day: {e}")
         finally:
             await browser.close()
 
-    return []
+    return label, []
 
 from modules.categories import FIXED_CATEGORIES, ROTATING_CATEGORIES
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
@@ -368,6 +386,7 @@ async def scrape_hidden_gem(category_url, category_display, label="Hidden Gem"):
             await browser.close()
 
     return label, []
+
 
 
 
