@@ -78,10 +78,22 @@ def format_top5_html(products, category):
 
 
 def format_budget_picks_html(products):
-    message = f"💸 <b>Budget Picks Under ₹999</b>\n\n"
-    for i, p in enumerate(products, start=1):
-        message += format_list_item_html(i, p)
+    message = "<b>Budget Picks of the Day (Under ₹999)</b>\n\n"
+    for p in products:
+        category = p.get('category', '')
+        title = p['title']
+        price = p.get('price', '')
+        rating = p.get('rating', '')
+        url = p['url']
+
+        message += (
+            f"<b>{category}</b>\n"
+            f"{title}\n"
+            f"{price} | {rating}\n"
+            f"<a href=\"{url}\">View Deal</a>\n\n"
+        )
     return message.strip()
+
 
 
 
@@ -185,6 +197,7 @@ def format_markdown_caption(product: dict, label: str) -> str:
     caption += f"\n[🛒 Buy Now]({url})"
 
     return caption.strip()
+
 
 
 
